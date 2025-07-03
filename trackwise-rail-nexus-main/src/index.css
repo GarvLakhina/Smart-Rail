@@ -1,0 +1,133 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 216 98% 18%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 214 32% 47%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 174 70% 41%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    /* Railway-specific design tokens */
+    --rail-primary: 216 98% 18%;
+    --rail-secondary: 214 32% 47%;
+    --rail-accent: 174 70% 41%;
+    --rail-light: 210 40% 96%;
+    --rail-success: 142 76% 36%;
+    --rail-warning: 38 92% 50%;
+    --rail-danger: 0 84% 60%;
+
+    --sidebar-background: 216 98% 12%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 174 70% 41%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 216 30% 20%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 216 30% 25%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 174 70% 41%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 222.2 47.4% 11.2%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 174 70% 41%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  .animate-enter {
+    @apply animate-fade-in;
+  }
+
+  .line-indicator {
+    @apply relative;
+  }
+  
+  .line-indicator:before {
+    content: '';
+    @apply absolute left-0 top-0 w-1 h-full rounded-l-md;
+  }
+  
+  .status-ontime .line-indicator:before {
+    @apply bg-green-500;
+  }
+  
+  .status-delayed .line-indicator:before {
+    @apply bg-amber-500;
+  }
+  
+  .status-cancelled .line-indicator:before {
+    @apply bg-red-500;
+  }
+  
+  .status-boarding .line-indicator:before {
+    @apply bg-blue-500;
+  }
+}
