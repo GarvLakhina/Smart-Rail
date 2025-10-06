@@ -23,10 +23,56 @@
 <div class="panel">
   <div class="title">Smart Railway – AI-Powered Simulation</div>
   <div class="stat"><b>Active Trains:</b> <span id="nTrains">0</span> &nbsp; | &nbsp; <b>Tick:</b> <span id="tick">1.0s</span></div>
+  <div class="stat"><b>Sim Time:</b> <span id="simTime">--</span> &nbsp; | &nbsp; <button onclick="exportSchedules()" style="font-size:12px; padding:2px 6px;">Download Schedules</button></div>
+  <div class="stat"><b>Speed:</b> <span id="speed">1x</span>
+    <select onchange="setSimSpeed(parseFloat(this.value))" style="font-size:12px; margin-left:6px;">
+      <option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option>
+      <option value="2">2x</option>
+      <option value="5">5x</option>
+      <option value="10">10x</option>
+      <option value="20">20x</option>
+      <option value="30">30x</option>
+    </select>
+  </div>
+  <div class="stat">
+    <button onclick="evaluatePerformance()" style="font-size:12px; padding:2px 6px;">Compute Metrics (Acc/Se/Sp)</button>
+  </div>
+  <div class="stat" style="margin-top:6px;">
+    <div style="font-size:12px; font-weight:600; margin-bottom:4px;">Performance Snapshot (auto-computed)</div>
+    <table style="font-size:12px; border-collapse:collapse;">
+      <tr><th style="text-align:left; padding-right:8px;">Metric</th><th style="text-align:left; padding-right:8px;">Existing</th><th style="text-align:left;">Ours</th></tr>
+      <tr><td>Accuracy (Acc)</td><td id="acc_base">--</td><td id="acc_ours">--</td></tr>
+      <tr><td>Sensitivity (Se)</td><td id="se_base">--</td><td id="se_ours">--</td></tr>
+      <tr><td>Specificity (Sp)</td><td id="sp_base">--</td><td id="sp_ours">--</td></tr>
+      <tr><td>Balanced Accuracy (BA)</td><td id="ba_base">--</td><td id="ba_ours">--</td></tr>
+      <tr><td>F1 Score (F1)</td><td id="f1_base">--</td><td id="f1_ours">--</td></tr>
+    </table>
+  </div>
+  <div class="stat" style="margin-top:6px;">
+    <button onclick="exportMetrics()" style="font-size:12px; padding:2px 6px;">Export Metrics CSV</button>
+  </div>
   <div class="stat"><b>Collision Risks:</b> <span id="nRisk">0</span> detected</div>
+  <div class="stat" style="margin-top:6px;">
+    <label style="font-size:12px;">Import Official Schedules (JSON/CSV):
+      <input type="file" accept=".json,.csv" onchange="importSchedulesFromFile(event)" style="font-size:12px;" />
+    </label>
+  </div>
+  <div class="stat" style="margin-top:6px;">
+    <div style="font-size:12px; font-weight:600; margin-bottom:4px;">Build from PDFs (uses only local files)</div>
+    <div style="display:flex; gap:6px; align-items:center;">
+      <input type="file" accept="application/pdf" multiple onchange="buildSchedulesFromSelectedPDFs(event)" style="font-size:12px;" />
+      <button onclick="buildSchedulesFromRailwayData()" style="font-size:12px; padding:2px 6px;">Build from 'Railway Data' folder</button>
+    </div>
+    <div id="pdfBuildStatus" style="font-size:11px; color:#666; margin-top:4px;"></div>
+  </div>
   <div class="legend">
-    <div><span style="background:#1f77b4"></span> Train (normal)</div>
-    <div><span style="background:#d62728"></span> Collision risk</div>
+    <div><span style="background:#d62728"></span> Rajdhani Express</div>
+    <div><span style="background:#ff7f0e"></span> Shatabdi Express</div>
+    <div><span style="background:#2ca02c"></span> Superfast Express</div>
+    <div><span style="background:#1f77b4"></span> Express</div>
+    <div><span style="background:#9467bd"></span> Passenger</div>
+    <div><span style="background:#8c564b"></span> Freight</div>
   </div>
   <div id="alerts" style="margin-top:10px; max-height:200px; overflow-y:auto; font-size:12px; border-top:1px solid #eee; padding-top:8px;">
     <div style="color:#666; font-style:italic;">No collision threats detected</div>
@@ -35,6 +81,14 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- PDF.js for local PDF parsing (runs entirely in-browser) -->
+<script src="https://unpkg.com/pdfjs-dist@4.7.76/build/pdf.min.js"></script>
+<script>
+  // Configure PDF.js worker
+  if (window['pdfjsLib']) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.7.76/build/pdf.worker.min.js';
+  }
+</script>
 <script src="./sim.js"></script>
 </body>
 </html>
