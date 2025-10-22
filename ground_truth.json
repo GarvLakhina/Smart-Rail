@@ -1,0 +1,97 @@
+[
+  { 
+    "name": "PUNE-UBL Head-on Conflict", 
+    "time_simulated": "09:10:00", 
+    "track_id": "PUNE-UBL-T1", 
+    "trains": ["12039", "12040"], 
+    "collision_realized": true, 
+    "notes": "Expected Head-on collision on PUNE-UBL corridor at 09:10 AM."
+  },
+  
+  { 
+    "name": "CNB-LKO Head-on Conflict", 
+    "time_simulated": "17:33:00", 
+    "track_id": "LKO-CNB-T1", 
+    "trains": ["12067", "12065"], 
+    "collision_realized": true,
+    "notes": "Expected Head-on risk on LKO-CNB track shortly after 17:30 PM."
+  },
+
+
+  { 
+    "name": "Initial Geometric Crash", 
+    "time_simulated": "09:05:00", 
+    "track_id": "NGP-BPL-T1", 
+    "trains": ["12027", "12028"], 
+    "collision_realized": true, 
+    "notes": "Expected collision shortly after start time due to tight schedule on NGP-BPL segment."
+  },
+  
+  
+  { 
+    "name": "BCT-ADI Rear-End Risk", 
+    "time_simulated": "09:00:00", 
+    "track_id": "BCT-ADI-T1", 
+    "trains": ["12018", "12047"], 
+    "collision_realized": true,
+    "notes": "Expected rear-end risk due to close departure times on BCT-ADI segment."
+  },
+  
+
+  { 
+    "name": "MAS-TVC Head-on Risk", 
+    "time_simulated": "10:30:00", 
+    "track_id": "MAS-TVC-T1", 
+    "trains": ["12021", "12095"], 
+    "collision_realized": true,
+    "notes": "Expected head-on risk on the MAS-TVC track."
+  },
+  
+
+  { 
+    "name": "Safe Passage - Far Apart", 
+    "time_simulated": "18:00:00", 
+    "track_id": "SC-NGP-T1", 
+    "trains": ["12000", "12015"], 
+    "collision_realized": false, 
+    "notes": "Test of safe separation at long distance."
+  },
+
+  { 
+    "name": "Safe Passage - Different Tracks", 
+    "time_simulated": "12:00:00", 
+    "track_id": "MAS-BZA-T1", 
+    "trains": ["12002", "12010"], 
+    "collision_realized": false, 
+    "notes": "Test of zero risk on different corridors."
+  },
+  
+
+  { 
+    "name": "Safe Separation - Spaced Out", 
+    "time_simulated": "15:00:00", 
+    "track_id": "SBC-BZA-T1", 
+    "trains": ["12024", "12026"], 
+    "collision_realized": false, 
+    "notes": "Test of safe separation with similar destinations."
+  },
+
+  { 
+    "name": "Safe Passage - Late Night", 
+    "time_simulated": "23:00:00", 
+    "track_id": "HWH-PNBE-T1", 
+    "trains": ["12014", "12006"], 
+    "collision_realized": false, 
+    "notes": "Test of safe separation during non-peak time."
+  },
+
+
+  { 
+    "name": "Safe Passage - CNB/LKO Station Check", 
+    "time_simulated": "11:00:00", 
+    "track_id": "CNB-LKO-T1", 
+    "trains": ["12007", "12008"], 
+    "collision_realized": false, 
+    "notes": "Test of safe separation between adjacent stations."
+  }
+]
