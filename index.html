@@ -38,19 +38,6 @@
     </select>
   </div>
   <div class="stat"><b>Collision Risks:</b> <span id="nRisk">0</span> detected</div>
-  <div class="stat" style="margin-top:6px;">
-    <label style="font-size:12px;">Import Official Schedules (JSON/CSV):
-      <input type="file" accept=".json,.csv" onchange="importSchedulesFromFile(event)" style="font-size:12px;" />
-    </label>
-  </div>
-  <div class="stat" style="margin-top:6px;">
-    <div style="font-size:12px; font-weight:600; margin-bottom:4px;">Build from PDFs (uses only local files)</div>
-    <div style="display:flex; gap:6px; align-items:center;">
-      <input type="file" accept="application/pdf" multiple onchange="buildSchedulesFromSelectedPDFs(event)" style="font-size:12px;" />
-      <button onclick="buildSchedulesFromRailwayData()" style="font-size:12px; padding:2px 6px;">Build from 'Railway Data' folder</button>
-    </div>
-    <div id="pdfBuildStatus" style="font-size:11px; color:#666; margin-top:4px;"></div>
-  </div>
   <div class="legend">
     <div><span style="background:#800080"></span> Rajdhani Express</div>
     <div><span style="background:#ff7f0e"></span> Shatabdi Express</div>

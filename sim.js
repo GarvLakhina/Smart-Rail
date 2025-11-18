@@ -1435,6 +1435,10 @@ document.addEventListener('DOMContentLoaded', function() {
       if (typeof initializeSimulation === 'function') {
         console.log('[init] calling initializeSimulation (Delayed)');
         initializeSimulation();
+        // Attempt to load ground truth data from local file for metrics
+        if (typeof loadGroundTruth === 'function') {
+          loadGroundTruth().catch(() => {});
+        }
       } else {
         console.warn('[init] initializeSimulation is not defined at load time');
       }
@@ -1446,7 +1450,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // * UI Handler Stubs (Fixes Reference Errors)
 // **********************************************
 
-// Export Metrics CSV (Called from index.html line 54)
 window.exportMetrics = function() {
   alert("Exporting simulated metrics. Check console for data structure.");
   console.log("Exported Metrics:", {
@@ -1463,186 +1466,6 @@ window.exportMetrics = function() {
     "Timestamp": new Date().toISOString()
   });
 };
-
-// Import Schedules (Called from index.html line 59)
-window.importSchedulesFromFile = function(event) {
-  const file = event?.target?.files?.[0];
-  if (!file) return;
-  const statusEl = document.getElementById('pdfBuildStatus');
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(String(reader.result || 'null'));
-      OFFICIAL_SCHEDULES = data;
-      const applied = applyOfficialSchedules(data);
-      if (statusEl) statusEl.textContent = `Imported schedules from ${file.name}. Applied to ${applied.updated}/${applied.total} trains.`;
-      alert(`Imported ${applied.updated} schedules from ${file.name}.`);
-    } catch (e) {
-      console.error('Failed to import schedules', e);
-      alert('Failed to import schedules. See console for details.');
-      if (statusEl) statusEl.textContent = 'Failed to import schedules.';
-    }
-  };
-  reader.readAsText(file);
-};
-
-// Build from PDFs (Called from index.html line 65)
-window.buildSchedulesFromSelectedPDFs = async function(event) {
-  const statusEl = document.getElementById('pdfBuildStatus');
-  try {
-    ensureFavicon();
-    await ensurePdfJsLoaded();
-  } catch (e) {
-    console.error('PDF.js load failed', e);
-    if (statusEl) statusEl.textContent = 'PDF.js failed to load. See console.';
-    alert('Failed to load PDF.js from CDN.');
-    return;
-  }
-
-  const files = Array.from(event?.target?.files || []);
-  if (!files.length) {
-    if (statusEl) statusEl.textContent = 'No PDF files selected.';
-    alert('Choose one or more timetable PDFs to parse.');
-    return;
-  }
-
-  const stationIds = Object.keys(index || {});
-  const findTrainNo = (name) => {
-    const m = String(name||'').match(/(\d{4,6})/);
-    return m ? m[1] : null;
-  };
-  const parseStationsFromText = (text) => {
-    const positions = [];
-    for (const id of stationIds) {
-      const re = new RegExp('(?:^|[^A-Z0-9])' + id.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&') + '(?:[^A-Z0-9]|$)','i');
-      const m = re.exec(text);
-      if (m) positions.push({ id, idx: m.index });
-    }
-    positions.sort((a,b)=>a.idx-b.idx);
-    // Deduplicate while keeping order
-    const seen = new Set();
-    const ordered = [];
-    for (const p of positions) { if (!seen.has(p.id)) { seen.add(p.id); ordered.push(p.id); } }
-    // Keep a reasonable route length
-    return ordered.slice(0, 12);
-  };
-
-  let applied = 0, parsed = 0;
-  for (const file of files) {
-    try {
-      const buf = await file.arrayBuffer();
-      const doc = await pdfjsLib.getDocument({ data: buf }).promise;
-      let text = '';
-      const pageCount = Math.min(doc.numPages, 6);
-      for (let i=1;i<=pageCount;i++) {
-        const page = await doc.getPage(i);
-        const content = await page.getTextContent();
-        const t = content.items.map(it => it.str).join(' ');
-        text += ' ' + t;
-      }
-      parsed++;
-      const route = parseStationsFromText(text);
-      const no = findTrainNo(file.name);
-      if (route.length >= 2 && no) {
-        // Find train by number and apply schedule built from inferred route
-        const t = trains.find(tr => String(tr.no) === String(no));
-        if (t) {
-          t.routeStations = route;
-          t.schedule = generateDailySchedule(t, index, edges);
-          applied++;
-        }
-      }
-    } catch (e) { console.warn('PDF parse failed for', file?.name, e); }
-  }
-
-  if (statusEl) statusEl.textContent = `Parsed ${parsed} PDFs. Applied schedules for ${applied} trains.`;
-  alert(`Parsed ${parsed} PDF(s). Applied schedules for ${applied} train(s).`);
-};
-
-// Build from 'Railway Data' folder (Called from index.html line 66)
-window.buildSchedulesFromRailwayData = async function() {
-  const statusEl = document.getElementById('pdfBuildStatus');
-  const candidates = [
-    './Railway Data/official_schedules.json',
-    './official_schedules.json',
-    './schedules_100.json'
-  ];
-  if (statusEl) statusEl.textContent = 'Looking for schedules in Railway Data...';
-  let lastErr = null;
-  for (const url of candidates) {
-    try {
-      const resp = await fetch(url);
-      if (!resp.ok) { lastErr = new Error(`${url} -> ${resp.status}`); continue; }
-      const data = await resp.json();
-      OFFICIAL_SCHEDULES = data;
-      const applied = applyOfficialSchedules(data);
-      if (statusEl) statusEl.textContent = `Loaded ${url}. Applied to ${applied.updated}/${applied.total} trains.`;
-      alert(`Loaded schedules from: ${url}\nApplied to ${applied.updated} trains.`);
-      return;
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-  console.warn('No schedules file found in candidates', candidates, lastErr);
-  if (statusEl) statusEl.textContent = 'No schedules file found in Railway Data.';
-  alert('No schedules found in Railway Data or project root.');
-};
-
-// Map loaded schedule JSON into current trains
-function applyOfficialSchedules(data) {
-  const toDate = (v) => (v instanceof Date) ? v : new Date(v);
-  const normalizeStops = (stops) => (stops || []).map(s => ({
-    station: s.station || s.code || s.id,
-    arr: toDate(s.arr || s.arrival || s.arrival_time || s.a),
-    dep: toDate(s.dep || s.departure || s.departure_time || s.d)
-  })).filter(s => s.station && s.arr instanceof Date && !isNaN(s.arr) && s.dep instanceof Date && !isNaN(s.dep));
-  const normalizeDay = (d) => ({
-    date: toDate(d.date || d.day || d.start || Date.now()),
-    dayIndex: d.dayIndex ?? 0,
-    stops: normalizeStops(d.stops || d.schedule || d.stations)
-  });
-  const normalizeTrain = (t) => ({
-    no: String(t.no || t.trainNo || t.id || t.number),
-    schedule: Array.isArray(t.schedule) ? t.schedule.map(normalizeDay) : []
-  });
-
-  const dataset = (() => {
-    try {
-      if (Array.isArray(data)) return data;
-      if (Array.isArray(data?.trains)) return data.trains;
-      if (Array.isArray(data?.schedules)) return data.schedules;
-      return [];
-    } catch { return []; }
-  })();
-
-  const byNo = new Map();
-  dataset.forEach(t => {
-    try {
-      const nt = normalizeTrain(t);
-      if (nt.no) byNo.set(String(nt.no), nt);
-    } catch {}
-  });
-
-  let updated = 0;
-  const total = Array.isArray(trains) ? trains.length : 0;
-  trains.forEach(t => {
-    const m = byNo.get(String(t.no));
-    if (m && Array.isArray(m.schedule) && m.schedule.length) {
-      t.schedule = m.schedule;
-      updated++;
-    }
-  });
-
-  // If none matched but file looks like a single schedule for all, apply to all
-  if (updated === 0 && Array.isArray(dataset) && dataset.length && Array.isArray(dataset[0]?.stops)) {
-    const day = normalizeDay(dataset[0]);
-    trains.forEach(t => { t.schedule = [day]; });
-    updated = total;
-  }
-
-  console.log('[schedules] applied', { updated, total, keys: Array.from(byNo.keys()).slice(0,10) });
-  return { updated, total };
-}
 
 // Export schedules (Original, already existed)
 window.exportSchedules = function() {
@@ -1676,8 +1499,21 @@ window.exportSchedules = function() {
   a.remove();
   URL.revokeObjectURL(url);
 };
-// Global placeholder for the Ground Truth data loaded from a file
-let GROUND_TRUTH_DATA = null;
+
+// Load ground truth JSON and expose on window for metrics calculation
+async function loadGroundTruth(url = 'ground_truth.json') {
+  try {
+    const resp = await fetch(url, { cache: 'no-store' });
+    if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+    const data = await resp.json();
+    window.GROUND_TRUTH_DATA = Array.isArray(data) ? data : (Array.isArray(data?.events) ? data.events : data);
+    console.log('[ground_truth] loaded', { count: Array.isArray(window.GROUND_TRUTH_DATA) ? window.GROUND_TRUTH_DATA.length : 'n/a' });
+    return window.GROUND_TRUTH_DATA;
+  } catch (e) {
+    console.warn('[ground_truth] failed to load via fetch, you can manually call loadGroundTruth("/path/to/ground_truth.json") or assign window.GROUND_TRUTH_DATA', e);
+    throw e;
+  }
+}
 
 // Helper to check if ANY risk is detected on the specific track
 function isRiskDetectedOnTrack(risks, trackId) {
