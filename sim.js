@@ -104,6 +104,56 @@ const MS_PER_MIN = 60 * 1000;
 const DAYS_365 = 365;
 let TIME_SCALE = 1;
 
+function makeTrainDivIcon(color, bearingDeg, sizePx, opacity) {
+  const h = Math.max(16, Math.round(sizePx));
+  const w = Math.round(h * 0.62);
+  const r = Math.max(3, Math.round(h * 0.28));
+  const stroke = '#ffffff';
+  const strokeWidth = 1.2;
+  const pad = Math.max(1, Math.round(h * 0.06));
+  const bodyX = 0;
+  const bodyY = 0;
+  const bodyW = w;
+  const bodyH = h;
+  const winW = Math.max(4, Math.round(w * 0.48));
+  const winH = Math.max(4, Math.round(h * 0.36));
+  const winX = Math.round((w - winW) / 2);
+  const winY = Math.round(h * 0.16);
+  const barY = Math.round(h * 0.68);
+  const barW = Math.max(6, Math.round(w * 0.5));
+  const barH = Math.max(1, Math.round(h * 0.08));
+  const barX = Math.round((w - barW) / 2);
+  const headR = Math.max(2, Math.round(h * 0.08));
+  const headY = Math.round(h * 0.78);
+  const headLX = Math.round(w * 0.25);
+  const headRX = Math.round(w * 0.75);
+  const topLightR = Math.max(1, Math.round(h * 0.06));
+  const topLightCX = Math.round(w * 0.5);
+  const topLightCY = Math.round(h * 0.10);
+  const svg = `
+    <div style="width:${w}px; height:${h}px; display:flex; align-items:center; justify-content:center; opacity:${opacity};">
+      <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+        <g>
+          <rect x="${bodyX}" y="${bodyY}" rx="${r}" ry="${r}" width="${bodyW}" height="${bodyH}"
+                fill="${color}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+          <rect x="${winX}" y="${winY}" rx="${Math.max(2, Math.round(r*0.35))}" ry="${Math.max(2, Math.round(r*0.35))}" width="${winW}" height="${winH}"
+                fill="#e9f0ff" stroke="${stroke}" stroke-width="${strokeWidth * 0.5}" />
+          <rect x="${barX}" y="${barY}" width="${barW}" height="${barH}"
+                fill="#ffffff" opacity="0.9" />
+          <circle cx="${headLX}" cy="${headY}" r="${headR}" fill="#ffd54f" stroke="#fff" stroke-width="${strokeWidth * 0.4}" />
+          <circle cx="${headRX}" cy="${headY}" r="${headR}" fill="#ffd54f" stroke="#fff" stroke-width="${strokeWidth * 0.4}" />
+          <circle cx="${topLightCX}" cy="${topLightCY}" r="${topLightR}" fill="#ffffff" opacity="0.9" />
+        </g>
+      </svg>
+    </div>`;
+  return L.divIcon({ className: 'train-marker', html: svg, iconSize: [w, h], iconAnchor: [w / 2, h / 2] });
+}
+
+function getTrainIconSize(train) {
+  if (train.type === 'FREIGHT') return 18;
+  return 22;
+}
+
 // ---------- Train Types ----------
 const TRAIN_TYPES = {
   RAJDHANI: { speedRange: [110, 130], name: 'Rajdhani Express', color: '#800080' },
@@ -880,45 +930,15 @@ function enhancedESNGDMCollisionRisks(trains, edges, index, horizonMin = 60, ste
             // If a station lies between trains, suppress immediate geometric alert.
             // Still allow GDM (future prediction) to pass through.
             if (stationBetween && method === 'Geometric') {
-              if (gdmRisk <= 0.3) {
-                continue;
-              }
+              return;
             }
-
-            // Improved TTC using along-track separation and relative speed
-            const va = Math.max(5, a.train.speedKmh || 0);
-            const vb = Math.max(5, b.train.speedKmh || 0);
-            let ttcMin = null; // minutes
-            try {
-              let sepKm = null;
-              if (sepAlongKm != null) sepKm = Math.max(0, sepAlongKm);
-              else sepKm = Math.max(0.05, dist);
-              let relKmh = 0;
-              if (isHeadOn) relKmh = va + vb; else if (sameDirection) relKmh = Math.abs(va - vb);
-              if (relKmh > 1e-3) {
-                const ttcHr = sepKm / relKmh;
-                ttcMin = Math.max(0, ttcHr * 60);
-              }
-            } catch(_) {}
-            if (ttcMin == null || !Number.isFinite(ttcMin)) {
-              ttcMin = (sIdx * stepSec) / 60; // fallback to loop offset
-            }
-            const ttcFormatted = (ttc) => {
-              if (ttc < 1) {
-                const secs = Math.max(0, Math.round(ttc * 60));
-                return `0m ${secs}s`;
-              }
-              const mm = Math.floor(ttc);
-              const ss = Math.round((ttc - mm) * 60);
-              return `${mm}m ${ss}s`;
-            };
 
             risks.push({
               train1: a.train.no,
               train2: b.train.no,
               track: trackId,
-              ttc: ttcMin,
-              ttcFormatted: ttcFormatted(ttcMin),
+              ttc: Number.POSITIVE_INFINITY,
+              ttcFormatted: '--',
               isHeadOn,
               collisionType: classification,
               distance: dist,
@@ -1191,13 +1211,9 @@ function initTrains(n = 50) {
       const j0 = jitterLatLon(ilat, ilon, t.no);
       ilat = j0.lat; ilon = j0.lon;
     }
-    const m = L.circleMarker([ilat, ilon], {
-      pane: 'trains',
-      radius: t.type === 'FREIGHT' ? 5 : 7,
-      stroke: false,
-      fillColor: color,
-      fillOpacity: 0.95
-    }).addTo(map)
+    const size = getTrainIconSize(t);
+    const icon = makeTrainDivIcon(color, t.bearing || 0, size, 0.95);
+    const m = L.marker([ilat, ilon], { pane: 'trains', icon }).addTo(map)
       .bindTooltip(`${t.name} (#${t.no})\n${t.edge ? (t.edge.from+"→"+t.edge.to) : ''}\n${(((t.speedKmh||0) * Math.max(1, ((typeof window!=='undefined'&&typeof window.TIME_SCALE==='number')?window.TIME_SCALE:TIME_SCALE)))).toFixed(1)} km/h\nType: ${t.typeData.name}`, 
                  { permanent: false });
     trainMarkers.set(t.no, m);
@@ -1241,17 +1257,9 @@ function step() {
     const isPending = PENDING_STOP_UNTIL.has(String(t.no));
     const isStopped = STOPPED_TRAINS.has(String(t.no));
     const color = isStopped ? '#424242' : (isPending ? '#6d6d6d' : (isRisk ? '#c62828' : (t.typeData?.color || '#1f77b4')));
-    
-    m.setStyle({
-      pane: 'trains',
-      stroke: false,
-      fillColor: color,
-      fillOpacity: (isStopped || isPending) ? 0.9 : (isRisk ? 1.0 : 0.95),
-      radius: t.type === 'FREIGHT' ? 5 : 7
-    });
-    if (m.bringToFront) m.bringToFront();
-    
-    // Always snap to track edge when available; otherwise place exactly at station (no jitter)
+    const opacity = (isStopped || isPending) ? 0.9 : (isRisk ? 1.0 : 0.95);
+    const size = getTrainIconSize(t);
+
     let dlat = t.lat, dlon = t.lon;
     if (t.edge) {
       const p = snapToEdge(dlat, dlon, t.edge, index);
@@ -1262,6 +1270,11 @@ function step() {
       dlat = j.lat; dlon = j.lon;
     }
     m.setLatLng([dlat, dlon]);
+    
+    const icon = makeTrainDivIcon(color, t.bearing || 0, size, opacity);
+    if (m.setIcon) m.setIcon(icon);
+    if (m.setZIndexOffset) m.setZIndexOffset(isRisk ? 1000 : 0);
+    if (m.bringToFront) m.bringToFront();
     
     const riskInfo = risks.find(r => r.train1 === t.no || r.train2 === t.no);
     const riskText = riskInfo 
@@ -1324,6 +1337,15 @@ window.initializeSimulation = async function initializeSimulation() {
     }
   }
 
+  // Create a dedicated pane for stations so they render above lines but below trains
+  if (map && !map.getPane('stations')) {
+    map.createPane('stations');
+    const sp = map.getPane('stations');
+    if (sp) {
+      sp.style.zIndex = 640; // below trains(650), above overlayPane(400) and markerPane default
+    }
+  }
+
   // Build network
   index = Object.fromEntries(STATIONS.map(s => [s.id, s]));
   edges = buildEdges(index);
@@ -1356,6 +1378,7 @@ window.initializeSimulation = async function initializeSimulation() {
   STATIONS.forEach(s => {
     const color = stateColors[s.state] || '#2b8a3e';
     L.circleMarker([s.lat, s.lon], {
+      pane: 'stations',
       radius: 8,
       color: '#fff',
       fillColor: color,
@@ -1365,6 +1388,12 @@ window.initializeSimulation = async function initializeSimulation() {
       .bindTooltip(`${s.id} – ${s.name}<br><small>${s.state}</small>`, { permanent: false });
   });
   
+  // Ensure all stations are in view (after adding them), with some padding
+  try {
+    const allCoords = STATIONS.map(s => [s.lat, s.lon]);
+    map.fitBounds(L.latLngBounds(allCoords), { padding: [20, 20] });
+  } catch(_) {}
+
   // Initialize trains
   initTrains(30);
   
