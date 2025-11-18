@@ -48,7 +48,7 @@ const CrowdDensityHeatmap = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Real-time Crowd Density</h2>
-          <p className="text-muted-foreground">Heat map visualization of passenger distribution</p>
+          <p className="text-gray-600">Heat map visualization of passenger distribution</p>
         </div>
         <div className="flex gap-2">
           <Badge variant="outline" className="text-green-600">Live Data</Badge>
@@ -110,7 +110,7 @@ const CrowdDensityHeatmap = () => {
           </CardHeader>
           <CardContent>
             {/* Heat Map Visualization */}
-            <div className="relative bg-slate-100 rounded-lg h-80 mb-6 overflow-hidden">
+            <div className="relative bg-gray-100 rounded-lg h-80 mb-6 overflow-hidden">
               <svg className="absolute inset-0 w-full h-full">
                 {/* Station Layout */}
                 <rect x="10%" y="20%" width="80%" height="60%" fill="none" stroke="#94A3B8" strokeWidth="2" strokeDasharray="5,5" />
@@ -161,12 +161,12 @@ const CrowdDensityHeatmap = () => {
               {station.zones.map((zone, index) => {
                 const densityInfo = getDensityLevel(zone.density);
                 return (
-                  <div key={index} className="bg-slate-50 p-3 rounded-lg">
+                  <div key={index} className="bg-gray-50 p-3 rounded-lg">
                     <div className="flex justify-between items-center mb-1">
                       <h4 className="font-medium text-sm">{zone.name}</h4>
                       <div className={`w-3 h-3 rounded ${getDensityColor(zone.density)}`}></div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-gray-500">
                       <div>{zone.density}% capacity</div>
                       <div className={densityInfo.color}>{densityInfo.level}</div>
                     </div>

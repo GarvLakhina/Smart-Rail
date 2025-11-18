@@ -101,7 +101,7 @@ const EnergyOptimizationControl = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Energy Optimization Control Center</h2>
-          <p className="text-muted-foreground">Automated and manual control of station energy systems</p>
+          <p className="text-gray-600">Automated and manual control of station energy systems</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -123,9 +123,9 @@ const EnergyOptimizationControl = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Energy Usage</p>
+                <p className="text-sm font-medium text-gray-600">Total Energy Usage</p>
                 <p className="text-2xl font-bold">{totalEnergyUsage.toFixed(1)}</p>
-                <p className="text-xs text-muted-foreground">kWh/hour</p>
+                <p className="text-xs text-gray-500">kWh/hour</p>
               </div>
               <Zap className="h-8 w-8 text-yellow-500" />
             </div>
@@ -136,9 +136,9 @@ const EnergyOptimizationControl = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Daily Savings</p>
+                <p className="text-sm font-medium text-gray-600">Daily Savings</p>
                 <p className="text-2xl font-bold text-green-600">54.7</p>
-                <p className="text-xs text-muted-foreground">kWh saved</p>
+                <p className="text-xs text-gray-500">kWh saved</p>
               </div>
               <Leaf className="h-8 w-8 text-green-500" />
             </div>
@@ -149,9 +149,9 @@ const EnergyOptimizationControl = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Zones</p>
+                <p className="text-sm font-medium text-gray-600">Active Zones</p>
                 <p className="text-2xl font-bold">6/8</p>
-                <p className="text-xs text-muted-foreground">zones powered</p>
+                <p className="text-xs text-gray-500">zones powered</p>
               </div>
               <Power className="h-8 w-8 text-blue-500" />
             </div>
@@ -162,9 +162,9 @@ const EnergyOptimizationControl = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Cost Savings</p>
+                <p className="text-sm font-medium text-gray-600">Cost Savings</p>
                 <p className="text-2xl font-bold text-green-600">$127</p>
-                <p className="text-xs text-muted-foreground">today</p>
+                <p className="text-xs text-gray-500">today</p>
               </div>
               <div className="text-green-500 text-2xl font-bold">$</div>
             </div>
@@ -207,11 +207,11 @@ const EnergyOptimizationControl = () => {
                   const occupancyStatus = getOccupancyStatus(zone.occupancy);
                   
                   return (
-                    <div key={zone.id} className="border rounded-lg p-4 bg-slate-50">
+                    <div key={zone.id} className="border rounded-lg p-4 bg-gray-50">
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <h4 className="font-medium">{zone.name}</h4>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-4 text-sm text-gray-500">
                             <div className="flex items-center gap-1">
                               <Users className="h-3 w-3" />
                               <span>{zone.occupancy} people</span>
@@ -274,7 +274,7 @@ const EnergyOptimizationControl = () => {
                       
                       {/* Energy Usage Bar */}
                       <div className="mt-3">
-                        <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <div className="flex justify-between text-xs text-gray-500 mb-1">
                           <span>Energy Usage</span>
                           <span>{zone.energyUsage} kWh</span>
                         </div>

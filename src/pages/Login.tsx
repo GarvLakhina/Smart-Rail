@@ -1,34 +1,34 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Train, Shield, Users, Eye, EyeOff } from "lucide-react";
+import { Train, LogIn, ArrowRight, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [role, setRole] = useState("passenger");
-  const navigate = useNavigate();
   const { signIn } = useAuth();
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const navigate = useNavigate();
+  
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
+    
     try {
       const { error } = await signIn(email, password);
+      
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success("Signed in successfully!");
-        if (role === "admin") {
+        toast.success("Welcome back! Login successful");
+        // Navigate based on user role
+        if (email === 'admin@example.com') {
           navigate("/admin");
         } else {
           navigate("/passenger");
@@ -41,111 +41,153 @@ const Login = () => {
     }
   };
 
-  const isAdmin = role === "admin";
+  const fillDemoAdmin = () => {
+    setEmail("wizking864@gmail.com");
+    setPassword("Wizking@123");
+  };
 
+  const quickLoginDemoAdmin = async () => {
+    fillDemoAdmin();
+    // small delay to ensure state updates before submit
+    setTimeout(async () => {
+      setIsLoading(true);
+      const { error } = await signIn("wizking864@gmail.com", "Wizking@123");
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Logged in with Demo Admin");
+        navigate("/admin");
+      }
+      setIsLoading(false);
+    }, 0);
+  };
+  
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-slate-800 border-slate-600">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className={`p-3 rounded-full ${isAdmin ? 'bg-yellow-500' : 'bg-rail-accent'}`}>
-              {isAdmin ? (
-                <Shield className="h-8 w-8 text-slate-900" />
-              ) : (
-                <Users className="h-8 w-8 text-white" />
-              )}
-            </div>
-          </div>
-          <CardTitle className="text-2xl font-bold text-white">
-            {isAdmin ? "Admin Login" : "Passenger Login"}
-          </CardTitle>
-          <CardDescription className="text-slate-400">
-            {isAdmin 
-              ? "Access the administrative dashboard" 
-              : "Sign in to book tickets and manage your journey"
-            }
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={role} onValueChange={setRole} className="w-full mb-4">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-700">
-              <TabsTrigger value="passenger">Passenger</TabsTrigger>
-              <TabsTrigger value="admin">Admin</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-300">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-300">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="bg-slate-700 border-slate-600 text-white placeholder-slate-400 pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-slate-400 hover:text-slate-300"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-8 animate-fade-in">
+        {/* Header Section */}
+        <div className="text-center space-y-4">
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-200/50 rounded-full blur-xl"></div>
+              <div className="relative p-4 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full">
+                <Train className="h-12 w-12 text-white" />
               </div>
             </div>
-            <Button 
-              type="submit" 
-              className={`w-full ${
-                isAdmin 
-                  ? 'bg-yellow-500 hover:bg-yellow-600 text-slate-900' 
-                  : 'bg-rail-accent hover:bg-rail-accent/90 text-white'
-              }`}
-              disabled={isLoading}
-            >
-              {isLoading ? "Signing In..." : "Sign In"}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center space-y-2">
-            <p className="text-slate-400 text-sm">
-              Don't have an account?{" "}
-              <Link 
-                to="/register" 
-                className={`${isAdmin ? 'text-yellow-400 hover:text-yellow-300' : 'text-rail-accent hover:text-rail-accent/80'} font-medium`}
-              >
-                Sign up
-              </Link>
-            </p>
-            <Link 
-              to="/" 
-              className="inline-flex items-center text-slate-400 hover:text-white text-sm mt-4"
-            >
-              <Train className="h-4 w-4 mr-1" />
-              Back to Home
-            </Link>
           </div>
-        </CardContent>
-      </Card>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
+            <p className="text-gray-600">Sign in to access your TrackWise account</p>
+          </div>
+        </div>
+
+        {/* Login Card */}
+        <Card className="bg-white border-gray-200 rounded-2xl shadow-xl">
+          <CardHeader className="space-y-4">
+            <div className="text-center space-y-2">
+              <CardTitle className="text-xl text-gray-900 flex items-center justify-center gap-2">
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                TrackWise Portal
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Access your dashboard and travel services
+              </CardDescription>
+            </div>
+          </CardHeader>
+          
+          <form onSubmit={handleLogin}>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-gray-900 text-sm font-medium">
+                    Email Address
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500/20 transition-all duration-200"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-gray-900 text-sm font-medium">
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500/20 transition-all duration-200"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Demo Credentials */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">Demo Credentials</span>
+                </div>
+                <div className="space-y-1 text-xs text-blue-700">
+                  <p><strong className="text-blue-800">Admin:</strong> admin@example.com</p>
+                  <p><strong className="text-blue-800">Passenger:</strong> user@example.com</p>
+                  <p><strong className="text-blue-800">Password:</strong> any password</p>
+                </div>
+              </div>
+            </CardContent>
+            
+            <CardFooter className="flex flex-col space-y-4">
+              <Button 
+                type="submit" 
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Signing In...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <LogIn size={18} />
+                    Sign In
+                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  </div>
+                )}
+              </Button>
+              
+              <div className="text-center space-y-2">
+                <p className="text-sm text-gray-600">
+                  Don't have an account?{" "}
+                  <Link 
+                    to="/register" 
+                    className="text-blue-600 hover:text-blue-700 font-medium transition-colors hover:underline"
+                  >
+                    Create Account
+                  </Link>
+                </p>
+                <Link 
+                  to="/" 
+                  className="text-xs text-gray-500 hover:text-gray-700 transition-colors inline-flex items-center gap-1"
+                >
+                  ← Back to Home
+                </Link>
+              </div>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 };

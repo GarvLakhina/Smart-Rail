@@ -1,121 +1,67 @@
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Filter, ArrowRight } from "lucide-react";
 import TrainStatusCard from "@/components/TrainStatusCard";
+import { useTrainStatus } from "@/hooks/useTrainStatus";
 
 const TrainStatus = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredTrains, setFilteredTrains] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("all");
-  
-  // Sample train data for demonstration
-  const trains = [
-    {
-      id: "1",
-      trainNumber: "EXP101",
-      trainName: "Ocean Express",
-      origin: "Central Station",
-      destination: "Harbor Terminal",
-      departureTime: "08:30",
-      arrivalTime: "12:45",
-      status: "ontime" as const,
-      platform: "3",
-      progress: 75,
-      nextStation: "Riverside Junction",
-    },
-    {
-      id: "2",
-      trainNumber: "REG205",
-      trainName: "Valley Commuter",
-      origin: "Downtown",
-      destination: "Highland Park",
-      departureTime: "09:15",
-      arrivalTime: "10:30",
-      status: "delayed" as const,
-      delay: 15,
-      platform: "1",
-      progress: 40,
-      nextStation: "College Station",
-    },
-    {
-      id: "3",
-      trainNumber: "SPD330",
-      trainName: "Capital Bullet",
-      origin: "Union Square",
-      destination: "Metropolitan City",
-      departureTime: "10:00",
-      arrivalTime: "11:20",
-      status: "boarding" as const,
-      platform: "7",
-      progress: 0,
-    },
-    {
-      id: "4",
-      trainNumber: "LCL118",
-      trainName: "Suburban Local",
-      origin: "Westside",
-      destination: "Eastern Heights",
-      departureTime: "11:20",
-      arrivalTime: "13:15",
-      status: "ontime" as const,
-      platform: "5",
-      progress: 25,
-      nextStation: "Market Square",
-    },
-    {
-      id: "5",
-      trainNumber: "EXP432",
-      trainName: "Northern Express",
-      origin: "Southern Terminal",
-      destination: "North Junction",
-      departureTime: "12:05",
-      arrivalTime: "16:30",
-      status: "cancelled" as const,
-      platform: "2",
-      progress: 0,
-    },
-    {
-      id: "6",
-      trainNumber: "SPD550",
-      trainName: "Coast Runner",
-      origin: "Mountain View",
-      destination: "Seaside Terminal",
-      departureTime: "13:45",
-      arrivalTime: "17:20",
-      status: "ontime" as const,
-      platform: "9",
-      progress: 10,
-      nextStation: "Valley Pass",
-    },
-  ];
-  
-  // Filter trains based on search query and active tab
+  const { trains, loading } = useTrainStatus();
+  const [params] = useSearchParams();
+
+  // Prefill query from URL (?q=...) so redirects from the homepage are filtered immediately
   useEffect(() => {
-    let results = trains;
-    
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      results = results.filter(
-        train => 
-          train.trainNumber.toLowerCase().includes(query) || 
-          train.trainName.toLowerCase().includes(query) ||
-          train.origin.toLowerCase().includes(query) ||
-          train.destination.toLowerCase().includes(query)
-      );
-    }
-    
-    // Filter by tab
+    const q = params.get("q") || "";
+    if (q) setSearchQuery(q);
+  }, [params]);
+
+  const mapStatusToCard = (status: string): "ontime" | "delayed" | "cancelled" | "boarding" => {
+    const s = (status || "").toLowerCase();
+    if (s.includes("cancel")) return "cancelled";
+    if (s.includes("board")) return "boarding";
+    if (s.includes("delay")) return "delayed";
+    return "ontime";
+  };
+  
+  // Filter trains from hook based on search and active tab
+  useEffect(() => {
+    const list = (trains || []).map((t: any) => ({
+      id: String(t.id),
+      trainNumber: String(t.id),
+      trainName: String(t.name || ""),
+      origin: String(t.from || ""),
+      destination: String(t.to || ""),
+      departureTime: String(t.departure || "-"),
+      arrivalTime: String(t.arrival || "-"),
+      status: mapStatusToCard(t.status),
+      delay: typeof t.delay === 'number' ? t.delay : undefined,
+      platform: t.platform ? String(t.platform) : undefined,
+      progress: typeof t.progress === 'number' ? t.progress : (t.status === 'Arrived' ? 100 : t.status === 'Boarding' ? 0 : 50),
+      nextStation: t.nextStation,
+    }));
+
+    const query = searchQuery.toLowerCase();
+    let results = list.filter((train) =>
+      !query ||
+      train.trainNumber.toLowerCase().includes(query) ||
+      train.trainName.toLowerCase().includes(query) ||
+      train.origin.toLowerCase().includes(query) ||
+      train.destination.toLowerCase().includes(query)
+    );
+
     if (activeTab !== "all") {
-      results = results.filter(train => train.status === activeTab);
+      results = results.filter((train) => train.status === activeTab);
     }
-    
+
     setFilteredTrains(results);
-  }, [searchQuery, activeTab]);
+  }, [searchQuery, activeTab, trains]);
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,31 +76,31 @@ const TrainStatus = () => {
     <div className="container mx-auto space-y-8 pb-10 animate-enter">
       <header>
         <h1 className="text-3xl font-bold">Train Status</h1>
-        <p className="text-muted-foreground">Check real-time updates on train arrivals and departures</p>
+        <p className="text-gray-600">Check real-time updates on train arrivals and departures</p>
       </header>
       
-      <section className="bg-rail-light p-6 rounded-lg">
+      <section className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
         <form onSubmit={handleSearch}>
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <Label htmlFor="search" className="mb-2 block">Search by train number, name or station</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={18} />
                 <Input 
                   id="search"
                   className="pl-10"
-                  placeholder="e.g. EXP101, Central Station"
+                  placeholder="e.g. 12000 or Rajdhani NDLS-HWH"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
             <div className="flex items-end gap-2">
-              <Button type="submit" className="bg-rail-primary hover:bg-rail-primary/90">
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
                 <Search size={18} className="mr-2" />
                 Search
               </Button>
-              <Button variant="outline" className="bg-white">
+              <Button variant="outline" className="bg-gray-100 text-gray-900 hover:bg-gray-200">
                 <Filter size={18} />
               </Button>
             </div>
@@ -194,7 +140,7 @@ const TrainStatus = () => {
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-lg text-muted-foreground">No trains found matching your search criteria.</p>
+                <p className="text-lg text-gray-600">No trains found matching your search criteria.</p>
                 <Button variant="link" onClick={() => setSearchQuery("")}>
                   Clear search and view all trains
                 </Button>

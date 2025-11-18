@@ -1,15 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { auth, db } from '@/lib/firebase';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  User as FirebaseUser,
+} from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection } from 'firebase/firestore';
 
-// Mock User and Session types that were previously imported from '@supabase/supabase-js'
 export interface User {
   id: string;
   email?: string;
-  // Add any other user properties your application uses
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  dateOfBirth?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  profilePicture?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  role?: 'admin' | 'user';
 }
 
 export interface Session {
   user: User | null;
-  // Add any other session properties your application uses
 }
 
 export interface AuthState {
@@ -20,63 +38,137 @@ export interface AuthState {
   userRole: 'admin' | 'user' | null;
 }
 
-// A simple in-memory store for the user state
-let memoryUser: User | null = null;
-let memorySession: Session | null = null;
-let memoryUserRole: 'admin' | 'user' | null = null;
+const mapFirebaseUser = async (fbUser: FirebaseUser): Promise<User> => {
+  // Try normal users collection first
+  const userDocRef = doc(db, 'users', fbUser.uid);
+  const userSnap = await getDoc(userDocRef);
+  if (userSnap.exists()) {
+    const data = userSnap.data() as Partial<User>;
+    return {
+      id: fbUser.uid,
+      email: fbUser.email || undefined,
+      role: 'user',
+      ...data,
+    } as User;
+  }
+
+  // Fallback to admins collection
+  const adminDocRef = doc(db, 'admins', fbUser.uid);
+  const adminSnap = await getDoc(adminDocRef);
+  if (adminSnap.exists()) {
+    const data = adminSnap.data() as Partial<User>;
+    return {
+      id: fbUser.uid,
+      email: fbUser.email || undefined,
+      role: 'admin',
+      ...data,
+    } as User;
+  }
+
+  // If neither doc exists, create a minimal user doc on first sign-in
+  await setDoc(userDocRef, {
+    email: fbUser.email || null,
+    role: 'user',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+  return {
+    id: fbUser.uid,
+    email: fbUser.email || undefined,
+    role: 'user',
+  } as User;
+};
 
 export const useAuth = (): AuthState & {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  updateProfile: (profileData: Partial<User>) => Promise<{ error: any }>;
+  getUserProfile: () => User | null;
 } => {
-  const [user, setUser] = useState<User | null>(memoryUser);
-  const [session, setSession] = useState<Session | null>(memorySession);
-  const [isLoading, setIsLoading] = useState(false); // Set to false as we are not doing async operations
-  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(memoryUserRole);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
 
   useEffect(() => {
-    // On initial load, we can check if we have a user in our "memory"
-    setUser(memoryUser);
-    setSession(memorySession);
-    setUserRole(memoryUserRole);
+    const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      if (!fbUser) {
+        setUser(null);
+        setSession(null);
+        setUserRole(null);
+        setIsLoading(false);
+        return;
+      }
+      try {
+        const mapped = await mapFirebaseUser(fbUser);
+        setUser(mapped);
+        setSession({ user: mapped });
+        setUserRole((mapped.role as 'admin' | 'user') || 'user');
+      } finally {
+        setIsLoading(false);
+      }
+    });
+    return () => unsub();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    setIsLoading(true);
-    // Simulate a successful login
-    const mockUser: User = { id: 'mock-user-id', email };
-    const mockSession: Session = { user: mockUser };
-    
-    memoryUser = mockUser;
-    memorySession = mockSession;
-    // for testing purposes, let's say 'admin@example.com' is an admin
-    memoryUserRole = email === 'admin@example.com' ? 'admin' : 'user';
-
-    setUser(mockUser);
-    setSession(mockSession);
-    setUserRole(memoryUserRole);
-    setIsLoading(false);
-    
-    return { error: null };
+    try {
+      setIsLoading(true);
+      await signInWithEmailAndPassword(auth, email, password);
+      return { error: null };
+    } catch (error) {
+      return { error };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const signUp = async (email: string, password: string) => {
-    // For simplicity, signUp will just sign in the user directly
-    return signIn(email, password);
+    try {
+      setIsLoading(true);
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const userRef = doc(db, 'users', cred.user.uid);
+      await setDoc(userRef, {
+        email,
+        role: 'user',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      return { error: null };
+    } catch (error) {
+      return { error };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const signOut = async () => {
     setIsLoading(true);
-    memoryUser = null;
-    memorySession = null;
-    memoryUserRole = null;
-
-    setUser(null);
-    setSession(null);
-    setUserRole(null);
-    setIsLoading(false);
+    try {
+      await firebaseSignOut(auth);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const updateProfile = async (profileData: Partial<User>) => {
+    try {
+      if (!auth.currentUser) return { error: { message: 'No user logged in' } };
+      // Decide collection by detected role
+      const targetCollection = (userRole === 'admin') ? 'admins' : 'users';
+      const userRef = doc(db, targetCollection, auth.currentUser.uid);
+      await updateDoc(userRef, {
+        ...profileData,
+        updatedAt: serverTimestamp(),
+      });
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const getUserProfile = () => user;
 
   return {
     user,
@@ -87,5 +179,7 @@ export const useAuth = (): AuthState & {
     signIn,
     signUp,
     signOut,
+    updateProfile,
+    getUserProfile,
   };
 };

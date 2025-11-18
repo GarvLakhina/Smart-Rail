@@ -69,7 +69,7 @@ const EnergyOptimization = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-2">Energy Optimization System</h2>
-        <p className="text-muted-foreground">Automated energy management based on real-time occupancy data</p>
+        <p className="text-gray-600">Automated energy management based on real-time occupancy data</p>
       </div>
 
       {/* System Overview */}
@@ -78,9 +78,9 @@ const EnergyOptimization = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Energy Usage</p>
+                <p className="text-sm font-medium text-gray-500">Energy Usage</p>
                 <p className="text-2xl font-bold">{systemStats.totalEnergyUsage}</p>
-                <p className="text-xs text-muted-foreground">kWh/hour</p>
+                <p className="text-xs text-gray-500">kWh/hour</p>
               </div>
               <Zap className="h-8 w-8 text-yellow-500" />
             </div>
@@ -91,9 +91,9 @@ const EnergyOptimization = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Energy Saved</p>
+                <p className="text-sm font-medium text-gray-500">Energy Saved</p>
                 <p className="text-2xl font-bold text-green-600">{systemStats.totalSavings}</p>
-                <p className="text-xs text-muted-foreground">kWh today</p>
+                <p className="text-xs text-gray-500">kWh today</p>
               </div>
               <TrendingDown className="h-8 w-8 text-green-500" />
             </div>
@@ -104,9 +104,9 @@ const EnergyOptimization = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">CO₂ Reduced</p>
+                <p className="text-sm font-medium text-gray-500">CO₂ Reduced</p>
                 <p className="text-2xl font-bold text-green-600">{systemStats.co2Reduction}</p>
-                <p className="text-xs text-muted-foreground">kg today</p>
+                <p className="text-xs text-gray-500">kg today</p>
               </div>
               <Leaf className="h-8 w-8 text-green-500" />
             </div>
@@ -117,9 +117,9 @@ const EnergyOptimization = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Cost Savings</p>
+                <p className="text-sm font-medium text-gray-500">Cost Savings</p>
                 <p className="text-2xl font-bold text-green-600">${systemStats.costSavings}</p>
-                <p className="text-xs text-muted-foreground">today</p>
+                <p className="text-xs text-gray-500">today</p>
               </div>
               <div className="text-green-500">$</div>
             </div>
@@ -156,7 +156,7 @@ const EnergyOptimization = () => {
             
             <CardContent>
               <div className="space-y-4">
-                <div className="text-sm text-muted-foreground mb-3">
+                <div className="text-sm text-gray-500 mb-3">
                   Efficiency Score: 
                   <Progress value={station.efficiency} className="h-2 mt-1" />
                 </div>
@@ -166,11 +166,11 @@ const EnergyOptimization = () => {
                     const occupancyStatus = getOccupancyStatus(zone.occupancy);
                     
                     return (
-                      <div key={zoneIndex} className="flex items-center justify-between p-4 bg-rail-light rounded-lg">
+                      <div key={zoneIndex} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="flex items-center gap-4">
                           <div>
                             <h4 className="font-medium">{zone.name}</h4>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
                               <span className={occupancyStatus.color}>
                                 {zone.occupancy} people ({occupancyStatus.status})
                               </span>

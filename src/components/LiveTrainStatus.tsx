@@ -1,56 +1,60 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Train, MapPin, Clock, AlertTriangle, CheckCircle, Search } from "lucide-react";
+import { Search } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
-interface TrainStatusData {
-  trainNumber: string;
-  trainName: string;
-  currentStation: string;
-  nextStation: string;
-  estimatedArrival: string;
-  estimatedDeparture: string;
-  delay: number;
-  status: "On Time" | "Delayed" | "Cancelled" | "Departed";
-  platformNumber: string;
-  coaches: number;
-  route: string[];
-  currentStationIndex: number;
-}
+import { useTrainStatus } from "@/hooks/useTrainStatus";
+import TrainStatusCard from "@/components/TrainStatusCard";
 
 const LiveTrainStatus = () => {
   const [searchTrain, setSearchTrain] = useState("");
-  const [selectedTrain, setSelectedTrain] = useState<TrainStatusData | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const { trains, loading, updateTrainStatus } = useTrainStatus();
+  const [filter, setFilter] = useState<"all" | "ontime" | "delayed" | "boarding" | "cancelled">("all");
+  const [params] = useSearchParams();
 
-  // Mock data - in real app, this would come from live API
-  const mockTrainData: TrainStatusData = {
-    trainNumber: "EXP101",
-    trainName: "Ocean Express",
-    currentStation: "Junction City",
-    nextStation: "Metro Central",
-    estimatedArrival: "14:30",
-    estimatedDeparture: "14:35",
-    delay: 15,
-    status: "Delayed",
-    platformNumber: "3",
-    coaches: 18,
-    route: ["Central Station", "North Junction", "Junction City", "Metro Central", "South Terminal"],
-    currentStationIndex: 2
+  // Prefill from URL query (?q=...) so navigation from the homepage filters immediately
+  useEffect(() => {
+    const q = params.get("q") || "";
+    if (q) setSearchTrain(q);
+  }, [params]);
+
+  const mapStatusToCard = (status: string): "ontime" | "delayed" | "cancelled" | "boarding" => {
+    const s = (status || "").toLowerCase();
+    if (s.includes("cancel")) return "cancelled";
+    if (s.includes("board")) return "boarding";
+    if (s.includes("delay")) return "delayed";
+    return "ontime";
   };
 
+  const query = searchTrain.trim().toLowerCase();
+  const filteredTrains = (trains || []).filter((t: any) => {
+    const matchesQuery = !query ||
+      String(t.id).toLowerCase().includes(query) ||
+      String(t.name || "").toLowerCase().includes(query) ||
+      String(t.from || "").toLowerCase().includes(query) ||
+      String(t.to || "").toLowerCase().includes(query);
+    const cardStatus = mapStatusToCard(t.status);
+    const matchesFilter = filter === "all" || cardStatus === filter;
+    return matchesQuery && matchesFilter;
+  });
+
   const handleSearch = async () => {
-    if (!searchTrain.trim()) return;
-    
+    // keep a tiny debounce to avoid spamming state
     setIsSearching(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSelectedTrain(mockTrainData);
+    await new Promise(resolve => setTimeout(resolve, 200));
     setIsSearching(false);
+  };
+
+  const setOnTime = (t: any) => updateTrainStatus(String(t.id), 'On Time', 0, t.nextStation);
+  const setBoarding = (t: any) => updateTrainStatus(String(t.id), 'Boarding', 0, t.nextStation);
+  const setCancelled = (t: any) => updateTrainStatus(String(t.id), 'Cancelled', 0, t.nextStation);
+  const addDelay5 = (t: any) => {
+    const current = typeof t.delay === 'number' ? t.delay : 0;
+    updateTrainStatus(String(t.id), 'Delayed', current + 5, t.nextStation);
   };
 
   const getStatusColor = (status: string) => {
@@ -78,14 +82,14 @@ const LiveTrainStatus = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-2">Live Train Status</h2>
-        <p className="text-muted-foreground">Get real-time updates on train schedules and delays</p>
+        <p className="text-gray-600">Get real-time updates on train schedules and delays</p>
       </div>
 
       {/* Search Section */}
       <Card>
         <CardHeader>
           <CardTitle>Track Your Train</CardTitle>
-          <CardDescription>Enter train number or name to get live status</CardDescription>
+          <CardDescription>Enter train number, name or station to filter live status</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4">
@@ -93,146 +97,60 @@ const LiveTrainStatus = () => {
               <Label htmlFor="trainSearch">Train Number / Name</Label>
               <Input
                 id="trainSearch"
-                placeholder="e.g., EXP101 or Ocean Express"
+                placeholder="e.g. 12000 or Rajdhani NDLS-HWH"
                 value={searchTrain}
                 onChange={(e) => setSearchTrain(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
             <div className="flex items-end">
-              <Button onClick={handleSearch} disabled={isSearching} className="bg-rail-primary hover:bg-rail-primary/90">
+              <Button onClick={handleSearch} disabled={isSearching || loading} className="bg-blue-600 hover:bg-blue-700">
                 <Search size={16} className="mr-2" />
-                {isSearching ? "Searching..." : "Track"}
+                {loading ? "Loading..." : isSearching ? "Searching..." : "Search"}
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2">
+        {(["all","ontime","delayed","boarding","cancelled"] as const).map((f) => (
+          <Button key={f} variant={filter === f ? "default" : "outline"} size="sm" onClick={() => setFilter(f)}>
+            {f === "all" ? "All Trains" : f.charAt(0).toUpperCase() + f.slice(1)}
+          </Button>
+        ))}
+      </div>
 
-      {/* Train Status Display */}
-      {selectedTrain && (
+      {/* Grid of train status cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredTrains.map((t: any) => (
+          <div key={t.id} className="space-y-2">
+            <TrainStatusCard
+              trainNumber={String(t.id)}
+              trainName={String(t.name || "")}
+              origin={String(t.from || "")}
+              destination={String(t.to || "")}
+              departureTime={String(t.departure || "-")}
+              arrivalTime={String(t.arrival || "-")}
+              status={mapStatusToCard(t.status)}
+              delay={typeof t.delay === 'number' ? t.delay : 0}
+              platform={t.platform ? String(t.platform) : undefined}
+              nextStation={t.nextStation}
+              progress={typeof t.progress === 'number' ? t.progress : (t.status === 'Arrived' ? 100 : t.status === 'Boarding' ? 0 : 50)}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => addDelay5(t)}>+5 min delay</Button>
+              <Button size="sm" variant="outline" onClick={() => setOnTime(t)}>Set On Time</Button>
+              <Button size="sm" variant="outline" onClick={() => setBoarding(t)}>Set Boarding</Button>
+              <Button size="sm" variant="destructive" onClick={() => setCancelled(t)}>Cancel</Button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {filteredTrains.length === 0 && (
         <Card>
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Train size={24} className="text-rail-primary" />
-                  {selectedTrain.trainNumber} - {selectedTrain.trainName}
-                </CardTitle>
-                <CardDescription>Platform {selectedTrain.platformNumber} • {selectedTrain.coaches} Coaches</CardDescription>
-              </div>
-              <Badge className={getStatusColor(selectedTrain.status)}>
-                {selectedTrain.status}
-              </Badge>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-6">
-            {/* Current Status */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <MapPin size={16} className="text-rail-secondary" />
-                    Current Location
-                  </h4>
-                  <p className="text-lg font-medium">{selectedTrain.currentStation}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Clock size={14} className="text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      Departure: {selectedTrain.estimatedDeparture}
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold mb-2">Next Station</h4>
-                  <p className="text-lg font-medium">{selectedTrain.nextStation}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Clock size={14} className="text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      ETA: {selectedTrain.estimatedArrival}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    {selectedTrain.delay === 0 ? (
-                      <CheckCircle size={16} className="text-green-600" />
-                    ) : (
-                      <AlertTriangle size={16} className="text-red-600" />
-                    )}
-                    Delay Status
-                  </h4>
-                  <p className={`text-lg font-medium ${getDelayColor(selectedTrain.delay)}`}>
-                    {selectedTrain.delay === 0 ? "On Time" : `${selectedTrain.delay} minutes delayed`}
-                  </p>
-                </div>
-
-                {selectedTrain.delay > 0 && (
-                  <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle size={16} className="text-red-600" />
-                      <span className="text-sm font-medium text-red-800">Delay Notice</span>
-                    </div>
-                    <p className="text-sm text-red-700 mt-1">
-                      Train is running {selectedTrain.delay} minutes behind schedule due to operational reasons.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Route Progress */}
-            <div>
-              <h4 className="font-semibold mb-4">Route Progress</h4>
-              <div className="space-y-2">
-                {selectedTrain.route.map((station, index) => (
-                  <div key={station} className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${
-                      index < selectedTrain.currentStationIndex 
-                        ? "bg-green-500" 
-                        : index === selectedTrain.currentStationIndex 
-                        ? "bg-blue-500" 
-                        : "bg-gray-300"
-                    }`} />
-                    <span className={`${
-                      index === selectedTrain.currentStationIndex 
-                        ? "font-semibold text-rail-primary" 
-                        : index < selectedTrain.currentStationIndex
-                        ? "text-green-600"
-                        : "text-muted-foreground"
-                    }`}>
-                      {station}
-                      {index === selectedTrain.currentStationIndex && " (Current)"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <Button size="sm" variant="outline">
-                Set Alerts
-              </Button>
-              <Button size="sm" variant="outline">
-                Share Status
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {!selectedTrain && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Train className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-muted-foreground">Enter a train number to view live status</p>
+          <CardContent className="py-8 text-center text-gray-600">
+            No trains match your search/filter. Try another query.
           </CardContent>
         </Card>
       )}

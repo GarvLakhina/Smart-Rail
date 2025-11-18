@@ -82,7 +82,7 @@ const HelpCenter = () => {
     <div className="container mx-auto space-y-8 pb-10 animate-enter">
       <header>
         <h1 className="text-3xl font-bold">Help Center</h1>
-        <p className="text-muted-foreground">Find answers to your questions or get in touch with our support team</p>
+        <p className="text-gray-600">Find answers to your questions or get in touch with our support team</p>
       </header>
 
       <Tabs defaultValue="faq" className="space-y-6">
@@ -105,7 +105,7 @@ const HelpCenter = () => {
             </CardHeader>
             <CardContent>
               <div className="relative mb-6">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={18} />
                 <Input
                   placeholder="Search FAQs..."
                   className="pl-10"
@@ -120,7 +120,7 @@ const HelpCenter = () => {
                     <AccordionTrigger className="text-left">
                       {faq.question}
                     </AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground">
+                    <AccordionContent className="text-gray-600">
                       {faq.answer}
                     </AccordionContent>
                   </AccordionItem>
@@ -129,7 +129,7 @@ const HelpCenter = () => {
 
               {filteredFaqs.length === 0 && (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">No FAQs match your search. Try different keywords or contact our support team.</p>
+                  <p className="text-gray-600">No FAQs match your search. Try different keywords or contact our support team.</p>
                 </div>
               )}
             </CardContent>
@@ -154,12 +154,12 @@ const HelpCenter = () => {
                     <div key={chat.id} className={`flex ${chat.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-xs p-3 rounded-lg ${
                         chat.sender === 'user' 
-                          ? 'bg-rail-primary text-white' 
-                          : 'bg-rail-light text-foreground'
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-gray-100 text-gray-900'
                       }`}>
                         <p className="text-sm">{chat.message}</p>
                         <p className={`text-xs mt-1 ${
-                          chat.sender === 'user' ? 'text-blue-100' : 'text-muted-foreground'
+                          chat.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
                         }`}>
                           {chat.timestamp.toLocaleTimeString()}
                         </p>
@@ -180,7 +180,7 @@ const HelpCenter = () => {
                   </Button>
                 </form>
 
-                <p className="text-xs text-muted-foreground text-center">
+                <p className="text-xs text-gray-500 text-center">
                   Our AI assistant is available 24/7. For complex issues, please contact human support.
                 </p>
               </div>
@@ -197,26 +197,26 @@ const HelpCenter = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <Phone size={18} className="text-rail-primary" />
+                  <Phone size={18} className="text-blue-600" />
                   <div>
                     <p className="font-medium">Customer Service</p>
-                    <p className="text-sm text-muted-foreground">1-800-TRACK-WI (1-800-872-2594)</p>
-                    <p className="text-xs text-muted-foreground">Available 24/7</p>
+                    <p className="text-sm text-gray-600">1-800-TRACK-WI (1-800-872-2594)</p>
+                    <p className="text-xs text-gray-600">Available 24/7</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Mail size={18} className="text-rail-primary" />
+                  <Mail size={18} className="text-blue-600" />
                   <div>
                     <p className="font-medium">Email Support</p>
-                    <p className="text-sm text-muted-foreground">support@trackwise.com</p>
-                    <p className="text-xs text-muted-foreground">Response within 24 hours</p>
+                    <p className="text-sm text-gray-600">support@trackwise.com</p>
+                    <p className="text-xs text-gray-600">Response within 24 hours</p>
                   </div>
                 </div>
 
-                <div className="bg-rail-light p-4 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <h4 className="font-medium mb-2">Emergency Contact</h4>
-                  <p className="text-sm text-muted-foreground mb-1">For urgent safety concerns or emergencies:</p>
+                  <p className="text-sm text-gray-600 mb-1">For urgent safety concerns or emergencies:</p>
                   <p className="font-medium text-red-600">Emergency Hotline: 911</p>
                 </div>
               </CardContent>

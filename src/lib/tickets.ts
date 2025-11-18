@@ -1,23 +1,6 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-
-// Lightweight client helper with safe fallback to localStorage when Supabase isn't configured
-let supabase: SupabaseClient | null = null;
-try {
-  const w = window as any;
-  const url = w.__SUPABASE_URL__ || w.SUPABASE_URL;
-  const key = w.__SUPABASE_ANON_KEY__ || w.SUPABASE_ANON_KEY;
-  if (url && key) {
-    supabase = createClient(url, key);
-    // eslint-disable-next-line no-console
-    console.info("Supabase client initialized.");
-  } else {
-    // eslint-disable-next-line no-console
-    console.warn("Supabase credentials not detected. Falling back to localStorage.");
-  }
-} catch (e) {
-  // eslint-disable-next-line no-console
-  console.warn("Supabase init failed, using localStorage fallback.");
-}
+import { db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
+import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 
 export type TicketRecord = {
   id?: string;
@@ -58,22 +41,67 @@ function writeLS(tickets: TicketRecord[]) {
 
 export const ticketsApi = {
   async add(ticket: TicketRecord) {
-    if (supabase) {
-      await supabase.from("tickets").insert(ticket);
+    try {
+      const uid = auth.currentUser?.uid;
+      const userEmail = auth.currentUser?.email || null;
+      await addDoc(collection(db, 'tickets'), {
+        ...ticket,
+        userId: uid || null,
+        userEmail,
+        created_at: serverTimestamp(),
+      });
+    } catch {
+      const current = readLS();
+      writeLS([ticket, ...current]);
     }
-    const current = readLS();
-    writeLS([ticket, ...current]);
   },
-  async list(): Promise<TicketRecord[]> {
-    if (supabase) {
-      const { data, error } = await supabase.from("tickets").select("*").order("created_at", { ascending: false });
-      if (!error && data) {
-        // Also mirror to localStorage for offline view
-        writeLS(data as TicketRecord[]);
-        return data as TicketRecord[];
+  async list(params?: { uid?: string | null; userEmail?: string | null }): Promise<TicketRecord[]> {
+    try {
+      const uid = params?.uid ?? auth.currentUser?.uid ?? null;
+      const userEmail = params?.userEmail ?? auth.currentUser?.email ?? null;
+      let isAdmin = false;
+      if (uid) {
+        const adminSnap = await getDoc(doc(db, 'admins', uid));
+        isAdmin = adminSnap.exists();
       }
+
+      const base = collection(db, 'tickets');
+      let docs: TicketRecord[] = [];
+      if (isAdmin) {
+        const qAll = query(base, orderBy('created_at', 'desc'));
+        const snapAll = await getDocs(qAll);
+        docs = snapAll.docs.map(d => ({ id: d.id, ...(d.data() as any) } as TicketRecord));
+      } else {
+        // No orderBy to avoid composite index requirement; we'll sort client-side
+        const byUser = query(base, where('userId', '==', uid || ''));
+        const snapUser = await getDocs(byUser);
+        const a = snapUser.docs.map(d => ({ id: d.id, ...(d.data() as any) } as TicketRecord));
+        let b: TicketRecord[] = [];
+        if (userEmail) {
+          // Fallback: include tickets saved without userId but with matching email
+          const byEmail = query(base, where('userEmail', '==', userEmail));
+          const snapEmail = await getDocs(byEmail);
+          b = snapEmail.docs.map(d => ({ id: d.id, ...(d.data() as any) } as TicketRecord));
+        }
+        const seen = new Set(a.map(x => x.id));
+        docs = [...a, ...b.filter(x => x.id && !seen.has(x.id))];
+      }
+
+      const items: TicketRecord[] = docs.map((rec: any) => {
+        const data = rec as any;
+        return {
+          id: rec.id,
+          ...data,
+          created_at: data.created_at?.toDate ? data.created_at.toDate().toISOString() : data.created_at,
+        } as TicketRecord;
+      });
+      // Ensure order desc by created_at if some records missed serverTimestamp at write time
+      items.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+      writeLS(items);
+      return items;
+    } catch {
+      return readLS();
     }
-    return readLS();
   },
   async clearAllLocal() {
     writeLS([]);

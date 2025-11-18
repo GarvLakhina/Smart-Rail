@@ -1,336 +1,259 @@
 
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { DashboardCard } from "@/components/ui/dashboard-card";
+import { FeatureSection } from "@/components/ui/feature-section";
 import { Button } from "@/components/ui/button";
-import { QrCode, Train, MessageCircle, MapPin, Star, Ticket, Clock, User, Search, ArrowRight } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import TrainStatusCard from "@/components/TrainStatusCard";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { 
+  Train, 
+  QrCode, 
+  MessageCircle, 
+  MapPin, 
+  Star, 
+  CreditCard,
+  Clock,
+  User,
+  Bell,
+  TrendingUp,
+  CheckCircle,
+  Calendar
+} from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { ticketsApi, TicketRecord } from "@/lib/tickets";
+import { stations, calculateDistance } from "@/lib/stationData";
 
 const PassengerDashboard = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [notifications] = useState(0);
+
+  const { data: tickets = [], isLoading } = useQuery<TicketRecord[]>({
+    queryKey: ["tickets", "dashboard"],
+    queryFn: () => ticketsApi.list(),
+    staleTime: 15_000,
+  });
+
+  const activeBookings = tickets.filter(t => t.status === "Confirmed").length;
+  const hasBookings = (tickets || []).length > 0;
+  const latestPnr = hasBookings ? (tickets[0]?.pnr || "") : "";
+  const nextJourney = (() => {
+    const withDate = tickets
+      .map(t => ({ t, time: Date.parse(t.date + (t.departureTime ? " " + t.departureTime : "")) || Date.parse(t.date) }))
+      .filter(x => !isNaN(x.time) && x.time >= Date.now())
+      .sort((a,b) => a.time - b.time);
+    if (withDate.length === 0) return "No upcoming";
+    const d = new Date(withDate[0].time);
+    return d.toLocaleString();
+  })();
+  const milesTraveled = (() => {
+    // Build quick lookup of station by code
+    const byCode = new Map(stations.map(s => [s.id.toUpperCase(), s]));
+    const kmTotal = (tickets || [])
+      .filter(t => t.status === "Confirmed")
+      .reduce((sum, t) => {
+        const from = byCode.get(String(t.from || '').toUpperCase());
+        const to = byCode.get(String(t.to || '').toUpperCase());
+        if (!from || !to) return sum;
+        const km = calculateDistance(from.lat, from.lon, to.lat, to.lon);
+        return sum + km;
+      }, 0);
+    return Math.round(kmTotal * 0.621371); // convert to miles
+  })();
+
+  const handleFeatureClick = (route: string) => {
+    navigate(route);
+  };
+
+  const getUserDisplayName = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    } else if (user?.firstName) {
+      return user.firstName;
+    } else if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'User';
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
-      <div className="container mx-auto space-y-8">
-        <header className="text-center">
-          <h1 className="text-4xl font-bold text-white mb-4">Passenger Portal</h1>
-          <p className="text-slate-300 text-lg">Your journey starts here</p>
-        </header>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Link to="/book-ticket">
-            <Card className="bg-slate-800 border-slate-600 hover:bg-slate-700 transition-colors cursor-pointer h-full">
-              <CardHeader>
-                <QrCode className="h-8 w-8 text-rail-accent mb-2" />
-                <CardTitle className="text-white">Book Tickets</CardTitle>
-                <CardDescription className="text-slate-400">Quick and easy ticket booking with QR codes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button className="w-full bg-rail-accent hover:bg-rail-accent/90">
-                  Book Now
+    <div className="min-h-screen bg-gray-50">
+      <div className="space-y-8">
+        {/* Welcome Header */}
+        <div className="relative overflow-hidden bg-white rounded-2xl p-8 border border-gray-200 shadow-sm">
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight mb-2 text-gray-900">Welcome Back, {getUserDisplayName()}!</h1>
+                <p className="text-lg text-gray-600">
+                  Your personalized travel hub is ready to assist you
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="sm" className="relative bg-gray-50 backdrop-blur-sm border-gray-300">
+                  <Bell className="h-4 w-4 mr-2" />
+                  Alerts
+                  {notifications > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-red-500">
+                      {notifications}
+                    </Badge>
+                  )}
                 </Button>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to="/train-status">
-            <Card className="bg-slate-800 border-slate-600 hover:bg-slate-700 transition-colors cursor-pointer h-full">
-              <CardHeader>
-                <Train className="h-8 w-8 text-rail-accent mb-2" />
-                <CardTitle className="text-white">Live Train Status</CardTitle>
-                <CardDescription className="text-slate-400">Real-time updates on train schedules</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full text-slate-300 border-slate-600">
-                  Check Status
+                <Button variant="outline" size="sm" className="bg-gray-50 backdrop-blur-sm border-gray-300" onClick={() => navigate('/profile')}>
+                  <User className="h-4 w-4 mr-2" />
+                  Profile
                 </Button>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to="/user">
-            <Card className="bg-slate-800 border-slate-600 hover:bg-slate-700 transition-colors cursor-pointer h-full">
-              <CardHeader>
-                <User className="h-8 w-8 text-rail-accent mb-2" />
-                <CardTitle className="text-white">My Bookings</CardTitle>
-                <CardDescription className="text-slate-400">View and manage your ticket bookings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full text-slate-300 border-slate-600">
-                  View Bookings
-                </Button>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Card className="bg-slate-800 border-slate-600 hover:bg-slate-700 transition-colors cursor-pointer h-full">
-            <CardHeader>
-              <MessageCircle className="h-8 w-8 text-rail-accent mb-2" />
-              <CardTitle className="text-white">Chat Assistant</CardTitle>
-              <CardDescription className="text-slate-400">Get help with voice or text chat</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full text-slate-300 border-slate-600">
-                Start Chat
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search section */}
-        <section className="bg-slate-800 shadow-lg rounded-lg p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="flex items-center border rounded-md px-3 py-2 bg-slate-700 focus-within:ring-2 focus-within:ring-rail-accent focus-within:border-transparent">
-                <MapPin size={18} className="text-gray-400 mr-2" />
-                <Input 
-                  type="text" 
-                  placeholder="Enter train number, station or destination" 
-                  className="border-0 bg-transparent focus-visible:ring-0 focus-visible:outline-none text-white"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
               </div>
             </div>
-            <Button className="bg-rail-primary hover:bg-rail-primary/90">
-              <Search size={18} className="mr-2" />
-              Search
-            </Button>
+            
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-gray-900">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Active Bookings</p>
+                    <p className="text-xl font-bold">{isLoading ? "…" : activeBookings}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-gray-900">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Calendar className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Next Journey</p>
+                    <p className="text-xl font-bold">{isLoading ? "…" : nextJourney}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 text-gray-900">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Miles Traveled</p>
+                    <p className="text-xl font-bold">{isLoading ? "…" : milesTraveled}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Badge label="Express Trains" />
-            <Badge label="Today" />
-            <Badge label="Popular Routes" />
-            <Badge label="Weekend Specials" />
-          </div>
-        </section>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/50 rounded-full blur-3xl"></div>
+        </div>
 
-        {/* Featured trains section */}
-        <section>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white">Live Train Status</h2>
-            <Link to="/train-status" className="text-rail-secondary hover:text-rail-accent flex items-center">
-              View all
-              <ArrowRight size={16} className="ml-1" />
-            </Link>
-          </div>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <DashboardCard
+            icon={Train}
+            title="Book Tickets"
+            description="Reserve seats for your journey"
+            onClick={() => handleFeatureClick("/book-ticket")}
+            className="bg-blue-50 border-blue-200 hover:bg-blue-100"
+          />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <TrainStatusCard
-              trainNumber="EXP101"
-              trainName="Ocean Express"
-              origin="Central Station"
-              destination="Harbor Terminal"
-              departureTime="08:30"
-              arrivalTime="12:45"
-              status="ontime"
-              platform="3"
-              progress={75}
-              nextStation="Riverside Junction"
-            />
-            
-            <TrainStatusCard
-              trainNumber="REG205"
-              trainName="Valley Commuter"
-              origin="Downtown"
-              destination="Highland Park"
-              departureTime="09:15"
-              arrivalTime="10:30"
-              status="delayed"
-              delay={15}
-              platform="1"
-              progress={40}
-              nextStation="College Station"
-            />
-            
-            <TrainStatusCard
-              trainNumber="SPD330"
-              trainName="Capital Bullet"
-              origin="Union Square"
-              destination="Metropolitan City"
-              departureTime="10:00"
-              arrivalTime="11:20"
-              status="boarding"
-              platform="7"
-              progress={0}
-            />
-          </div>
-        </section>
-
-        {/* Services section */}
-        <section>
-          <h2 className="text-2xl font-bold mb-6 text-white">Our Services</h2>
+          <DashboardCard
+            icon={QrCode}
+            title="My Tickets"
+            description="View and manage your bookings"
+            onClick={() => handleFeatureClick("/tickets")}
+            className="bg-green-50 border-green-200 hover:bg-green-100"
+          />
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <ServiceCard
-              icon={<Clock className="h-8 w-8 text-rail-accent" />}
-              title="Real-time Updates"
-              description="Get up-to-the-minute information on train arrivals, departures, and delays."
-            />
-            
-            <ServiceCard
-              icon={<Ticket className="h-8 w-8 text-rail-accent" />}
-              title="Online Booking"
-              description="Book tickets online with seat selection and receive e-tickets instantly."
-            />
-            
-            <ServiceCard
-              icon={<MapPin className="h-8 w-8 text-rail-accent" />}
-              title="Station Information"
-              description="Comprehensive details about stations, amenities, and accessibility features."
-            />
-            
-            <ServiceCard
-              icon={<Train className="h-8 w-8 text-rail-accent" />}
-              title="Train Tracking"
-              description="Track your train's location in real-time with our interactive map."
-            />
-          </div>
-        </section>
-
-        {/* Feature Highlights */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="bg-slate-800 border-slate-600">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Star className="h-6 w-6 text-yellow-500" />
-                Priority Services
-              </CardTitle>
-              <CardDescription className="text-slate-400">
-                Upgrade your travel experience with priority booking and services
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-slate-300 text-sm">Priority ticket confirmation</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-slate-300 text-sm">Dedicated customer support</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-slate-300 text-sm">Priority boarding access</span>
-              </div>
-              <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900">
-                Learn More
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800 border-slate-600">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <MapPin className="h-6 w-6 text-green-500" />
-                Trip Planner
-              </CardTitle>
-              <CardDescription className="text-slate-400">
-                Discover hotels and attractions near your destination
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-slate-300 text-sm">Hotel recommendations</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-slate-300 text-sm">Tourist attractions</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-slate-300 text-sm">Local points of interest</span>
-              </div>
-              <Button variant="outline" className="w-full text-slate-300 border-slate-600">
-                Explore
-              </Button>
-            </CardContent>
-          </Card>
+          <DashboardCard
+            icon={MapPin}
+            title="Trip Planner"
+            description="Discover hotels and attractions"
+            onClick={() => handleFeatureClick("/trip-planner")}
+            className="bg-orange-50 border-orange-200 hover:bg-orange-100"
+          />
         </div>
 
         {/* Recent Activity */}
-        <Card className="bg-slate-800 border-slate-600">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Clock className="h-6 w-6 text-blue-500" />
-              Recent Activity
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              Your latest bookings and travel updates
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-slate-700 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Ticket className="h-5 w-5 text-rail-accent" />
-                  <div>
-                    <p className="text-white font-medium">Ticket Booked</p>
-                    <p className="text-slate-400 text-sm">EXP101 - Central to Metro Junction</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900">Recent Bookings</h3>
+              <div className="space-y-3">
+                {(tickets || []).slice(0,4).map((t, idx) => (
+                  <div key={t.id || idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${t.status === 'Confirmed' ? 'bg-green-500' : t.status === 'Waiting' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+                      <div>
+                        <p className="font-medium text-gray-900">{t.from} → {t.to}</p>
+                        <p className="text-sm text-gray-600">{t.date}{t.departureTime ? `, ${t.departureTime}` : ''}</p>
+                      </div>
+                    </div>
+                    <Badge>{t.status}</Badge>
                   </div>
-                </div>
-                <span className="text-slate-400 text-sm">2 hours ago</span>
+                ))}
+                {(!tickets || tickets.length === 0) && (
+                  <div className="text-gray-600 text-sm">No recent bookings</div>
+                )}
               </div>
-              
-              <div className="flex items-center justify-between p-4 bg-slate-700 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Train className="h-5 w-5 text-green-500" />
-                  <div>
-                    <p className="text-white font-medium">Train Status Update</p>
-                    <p className="text-slate-400 text-sm">SPD330 is running on time</p>
-                  </div>
-                </div>
-                <span className="text-slate-400 text-sm">1 day ago</span>
-              </div>
+            </CardContent>
+          </Card>
 
-              <div className="flex items-center justify-between p-4 bg-slate-700 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <MessageCircle className="h-5 w-5 text-blue-500" />
-                  <div>
-                    <p className="text-white font-medium">Chat Session</p>
-                    <p className="text-slate-400 text-sm">Booking assistance completed</p>
-                  </div>
-                </div>
-                <span className="text-slate-400 text-sm">3 days ago</span>
+          <Card className="border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900">Quick Actions</h3>
+              <div className="space-y-3" role="list" aria-label="Quick actions">
+                <Button
+                  variant="outline"
+                  type="button"
+                  className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-blue-600"
+                  onClick={() => navigate('/train-status')}
+                  aria-label="Check live train status"
+                  title="Check live train status"
+                  role="listitem"
+                >
+                  <Clock className="h-4 w-4 mr-2" aria-hidden="true" />
+                  <span>Check Train Status</span>
+                </Button>
+
+                {hasBookings && (
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-blue-600"
+                    aria-label="Rate your recent journey"
+                    title="Rate your recent journey"
+                    onClick={() => latestPnr ? navigate(`/rate-journey?pnr=${latestPnr}`) : undefined}
+                    role="listitem"
+                  >
+                    <Star className="h-4 w-4 mr-2" aria-hidden="true" />
+                    <span>Rate Your Journey</span>
+                  </Button>
+                )}
+
+                {hasBookings && (
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-blue-600"
+                    aria-label="View payment history"
+                    title="View payment history"
+                    onClick={() => navigate('/payments')}
+                    role="listitem"
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" aria-hidden="true" />
+                    <span>Payment History</span>
+                  </Button>
+                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Premium Features removed per request */}
       </div>
     </div>
-  );
-};
-
-interface ServiceCardProps {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}
-
-export const ServiceCard = ({ icon, title, description }: ServiceCardProps) => {
-  return (
-    <Card className="transition-all hover:shadow-md hover:border-rail-accent/30 bg-slate-800 border-slate-600 text-white">
-      <CardContent className="pt-6">
-        <div className="mb-4">{icon}</div>
-        <h3 className="text-lg font-semibold mb-2">{title}</h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </CardContent>
-    </Card>
-  );
-};
-
-interface BadgeProps {
-  label: string;
-}
-
-export const Badge = ({ label }: BadgeProps) => {
-  return (
-    <span className="inline-block bg-slate-700 text-slate-300 rounded-full px-3 py-1 text-xs font-medium cursor-pointer hover:bg-rail-primary hover:text-white transition-colors">
-      {label}
-    </span>
   );
 };
 

@@ -75,7 +75,7 @@ const CrowdDensity = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-2">Real-time Crowd Density</h2>
-        <p className="text-muted-foreground">Monitor passenger density across stations and trains</p>
+        <p className="text-gray-600">Monitor passenger density across stations and trains</p>
       </div>
 
       {/* Overview Cards */}
@@ -84,10 +84,10 @@ const CrowdDensity = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Passengers</p>
+                <p className="text-sm font-medium text-gray-500">Total Passengers</p>
                 <p className="text-2xl font-bold">2,280</p>
               </div>
-              <Users className="h-8 w-8 text-rail-primary opacity-80" />
+              <Users className="h-8 w-8 text-blue-600 opacity-80" />
             </div>
           </CardContent>
         </Card>
@@ -96,10 +96,10 @@ const CrowdDensity = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Trains</p>
+                <p className="text-sm font-medium text-gray-500">Active Trains</p>
                 <p className="text-2xl font-bold">12</p>
               </div>
-              <Train className="h-8 w-8 text-rail-primary opacity-80" />
+              <Train className="h-8 w-8 text-blue-600 opacity-80" />
             </div>
           </CardContent>
         </Card>
@@ -108,7 +108,7 @@ const CrowdDensity = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Peak Station</p>
+                <p className="text-sm font-medium text-gray-500">Peak Station</p>
                 <p className="text-lg font-bold">Central Station</p>
               </div>
               <div className="text-red-500">
@@ -122,7 +122,7 @@ const CrowdDensity = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">System Capacity</p>
+                <p className="text-sm font-medium text-gray-500">System Capacity</p>
                 <p className="text-2xl font-bold">67%</p>
               </div>
               <div className="text-yellow-500">
@@ -145,7 +145,7 @@ const CrowdDensity = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-rail-primary" />
+                      <Users className="h-5 w-5 text-blue-600" />
                       {station.name}
                     </CardTitle>
                     <CardDescription>Peak time: {station.peakTime}</CardDescription>
@@ -183,13 +183,13 @@ const CrowdDensity = () => {
                       const trainLevel = getOccupancyLevel(train.passengers, train.capacity);
                       
                       return (
-                        <div key={trainIndex} className="flex items-center justify-between p-3 bg-rail-light rounded-md">
+                        <div key={trainIndex} className="flex items-center justify-between p-3 bg-gray-50 rounded-md border border-gray-200">
                           <div className="flex items-center gap-3">
-                            <Train className="h-4 w-4 text-rail-primary" />
+                            <Train className="h-4 w-4 text-blue-600" />
                             <span className="font-medium">{train.number}</span>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-sm text-gray-500">
                               {train.passengers}/{train.capacity}
                             </span>
                             <div className="w-20">

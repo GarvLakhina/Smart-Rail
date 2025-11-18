@@ -1,5 +1,3 @@
-
-
 import { Link } from "react-router-dom";
 import { 
   Home, 
@@ -12,10 +10,38 @@ import {
   Bell, 
   Info,
   Shield,
-  Activity
+  Activity,
+  Users,
+  FileText,
+  Settings,
+  BarChart3,
+  AlertTriangle,
+  Zap,
+  Calendar,
+  Database,
+  MessageSquare,
+  CreditCard,
+  Route,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Star,
+  TrendingUp,
+  Eye,
+  Edit,
+  Trash2,
+  Plus,
+  Search,
+  Filter,
+  Download,
+  Upload,
+  MapPin
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
+// Add proper types
 interface SidebarProps {
   isOpen: boolean;
 }
@@ -25,41 +51,48 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   
   return (
     <aside 
-      className={`bg-slate-900 text-white transition-all duration-300 ease-in-out border-r border-slate-700 ${
-        isOpen ? 'w-64' : 'w-0 md:w-16'
-      } overflow-hidden`}
+      className={cn(
+        "transition-all duration-300 ease-in-out overflow-hidden shadow-lg rounded-r-2xl bg-gray-900 border-r border-gray-700",
+        isOpen ? "w-72" : "w-0 md:w-16"
+      )}
     >
       <div className="h-full flex flex-col py-6">
-        <div className="px-4 mb-6">
-          {isOpen && <h2 className="text-xl font-bold mb-4">TrackWise</h2>}
+        <div className="px-6 mb-8">
+          {isOpen && (
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-1">TrackWise</h2>
+              <p className="text-sm text-gray-300">Railway Management</p>
+            </div>
+          )}
         </div>
         
-        <nav className="flex-1">
-          <div className="px-2 space-y-1">
+        <nav className="flex-1 px-3">
+          <div className="space-y-2">
             <SidebarLink to="/" icon={Home} label="Home" isOpen={isOpen} />
+            
             {user && isAdmin && (
-              <SidebarLink to="/admin" icon={Shield} label="Admin Dashboard" isOpen={isOpen} />
+              <>
+                {/* Collision Detection (kept) */}
+                <SidebarLink to="/admin/collision" icon={AlertTriangle} label="Collision Detection" isOpen={isOpen} />
+                {/* Priority Tickets Management */}
+                <SidebarLink to="/admin/priority-tickets" icon={Star} label="Priority Tickets" isOpen={isOpen} />
+                {/* Energy Management with Platform Lighting subpage */}
+                <SidebarLink to="/admin/energy" icon={Zap} label="Energy Management" isOpen={isOpen} />
+                {/* AI Station Management (empty page) */}
+                <SidebarLink to="/admin/ai-station" icon={Shield} label="AI Station Management" isOpen={isOpen} />
+              </>
             )}
+            
             {user && !isAdmin && (
-              <SidebarLink to="/passenger" icon={User} label="Passenger Portal" isOpen={isOpen} />
+              <>
+                <SidebarLink to="/passenger" icon={Gauge} label="Passenger Portal" isOpen={isOpen} />
+                <SidebarLink to="/train-status" icon={Train} label="Train Status" isOpen={isOpen} />
+                <SidebarLink to="/stations" icon={MapPin} label="Stations" isOpen={isOpen} />
+                <SidebarLink to="/trip-planner" icon={Route} label="Trip Planner" isOpen={isOpen} />
+                <SidebarLink to="/book-ticket" icon={Ticket} label="Book Ticket" isOpen={isOpen} />
+                <SidebarLink to="/help" icon={HelpCircle} label="Help" isOpen={isOpen} />
+              </>
             )}
-            <SidebarLink to="/train-status" icon={Train} label="Train Status" isOpen={isOpen} />
-            <SidebarLink to="/stations" icon={Map} label="Stations" isOpen={isOpen} />
-            {user && (
-              <SidebarLink to="/book-ticket" icon={Ticket} label="Book Ticket" isOpen={isOpen} />
-            )}
-          </div>
-          
-          <div className="mt-8 px-4">
-            {isOpen && <h3 className="text-xs uppercase tracking-wider text-slate-400 mb-2">Quick Access</h3>}
-            <div className="px-2 space-y-1">
-              {user && (
-                <SidebarLink to="/user" icon={User} label="My Profile" isOpen={isOpen} />
-              )}
-              <SidebarLink to="/help" icon={HelpCircle} label="Help & Support" isOpen={isOpen} />
-              <SidebarLink to="/announcements" icon={Bell} label="Announcements" isOpen={isOpen} />
-              <SidebarLink to="/about" icon={Info} label="About" isOpen={isOpen} />
-            </div>
           </div>
         </nav>
       </div>
@@ -75,18 +108,44 @@ interface SidebarLinkProps {
 }
 
 const SidebarLink = ({ to, icon: Icon, label, isOpen }: SidebarLinkProps) => {
+  if (isOpen) {
+    return (
+      <Link 
+        to={to} 
+        className={cn(
+          "group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200",
+          "text-gray-300 hover:text-white hover:bg-gray-800",
+          isOpen ? "justify-start" : "justify-center"
+        )}
+      >
+        <Icon className={cn(
+          "flex-shrink-0 transition-transform group-hover:scale-110",
+          isOpen ? "h-5 w-5" : "h-6 w-6"
+        )} />
+        {isOpen && <span className="ml-3 font-medium">{label}</span>}
+      </Link>
+    );
+  }
+  // Collapsed: show tooltip on icon hover
   return (
-    <Link 
-      to={to} 
-      className={`flex items-center p-2 rounded-md hover:bg-slate-800 transition-colors text-slate-300 hover:text-white ${
-        isOpen ? 'justify-start' : 'justify-center'
-      }`}
-    >
-      <Icon size={isOpen ? 18 : 20} />
-      {isOpen && <span className="ml-3">{label}</span>}
-    </Link>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link 
+          to={to} 
+          className={cn(
+            "group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200",
+            "text-gray-300 hover:text-white hover:bg-gray-800",
+            "justify-center"
+          )}
+        >
+          <Icon className="flex-shrink-0 transition-transform group-hover:scale-110 h-6 w-6" />
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="right" align="center">
+        {label}
+      </TooltipContent>
+    </Tooltip>
   );
 };
 
 export default Sidebar;
-

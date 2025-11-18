@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Smart Railway – Browser Simulation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    #map { position: fixed; inset: 0; }
+    .panel {
+      position: absolute; top: 10px; left: 10px; z-index: 1000;
+      background: rgba(255,255,255,0.92); padding: 10px 12px; border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .stat { font-size: 13px; color:#333; }
+    .title { font-weight: 700; margin-bottom:6px; }
+    .legend { margin-top:6px; font-size:12px; }
+    .legend span { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<div class="panel">
+  <div class="title">Smart Railway – AI-Powered Simulation</div>
+  <div class="stat"><b>Active Trains:</b> <span id="nTrains">0</span> &nbsp; | &nbsp; <b>Tick:</b> <span id="tick">1.0s</span></div>
+  <div class="stat"><b>Sim Time:</b> <span id="simTime">--</span> &nbsp; | &nbsp; <button onclick="exportSchedules()" style="font-size:12px; padding:2px 6px;">Download Schedules</button></div>
+  <div class="stat"><b>Speed:</b> <span id="speed">1x</span>
+    <select id="speedSelect" style="font-size:12px; margin-left:6px;">
+      <option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option>
+      <option value="2">2x</option>
+      <option value="5">5x</option>
+      <option value="10">10x</option>
+      <option value="20">20x</option>
+      <option value="30">30x</option>
+    </select>
+  </div>
+  <div class="stat"><b>Collision Risks:</b> <span id="nRisk">0</span> detected</div>
+  <div class="stat" style="margin-top:6px;">
+    <label style="font-size:12px;">Import Official Schedules (JSON/CSV):
+      <input type="file" accept=".json,.csv" onchange="importSchedulesFromFile(event)" style="font-size:12px;" />
+    </label>
+  </div>
+  <div class="stat" style="margin-top:6px;">
+    <div style="font-size:12px; font-weight:600; margin-bottom:4px;">Build from PDFs (uses only local files)</div>
+    <div style="display:flex; gap:6px; align-items:center;">
+      <input type="file" accept="application/pdf" multiple onchange="buildSchedulesFromSelectedPDFs(event)" style="font-size:12px;" />
+      <button onclick="buildSchedulesFromRailwayData()" style="font-size:12px; padding:2px 6px;">Build from 'Railway Data' folder</button>
+    </div>
+    <div id="pdfBuildStatus" style="font-size:11px; color:#666; margin-top:4px;"></div>
+  </div>
+  <div class="legend">
+    <div><span style="background:#800080"></span> Rajdhani Express</div>
+    <div><span style="background:#ff7f0e"></span> Shatabdi Express</div>
+    <div><span style="background:#2ca02c"></span> Superfast Express</div>
+    <div><span style="background:#1f77b4"></span> Express</div>
+    <div><span style="background:#9467bd"></span> Passenger</div>
+    <div><span style="background:#8c564b"></span> Freight</div>
+  </div>
+  <div id="alerts" style="margin-top:10px; max-height:200px; overflow-y:auto; font-size:12px; border-top:1px solid #eee; padding-top:8px;">
+    <div style="color:#b7b3b3; font-style:italic;">No collision threats detected</div>
+  </div>
+  <div style="margin-top:6px; font-size:11px; color: #b7b3b3">AI monitoring active. Move map/zoom freely.</div>
+</div>
+
+<!-- PDF.js for local PDF parsing (runs entirely in-browser) -->
+<script src="https://unpkg.com/pdfjs-dist@4.7.76/build/pdf.min.js"></script>
+<script>
+  // Configure PDF.js worker
+  if (window['pdfjsLib']) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.7.76/build/pdf.worker.min.js';
+  }
+</script>
+<script defer src="./sim.js?v=4"></script>
+</body>
+</html>

@@ -12,15 +12,15 @@ interface FeatureCardProps {
 }
 
 const FeatureCard = ({ title, features, onAddCard, variant = 'passenger' }: FeatureCardProps) => {
-  const cardBg = variant === 'admin' ? 'bg-slate-800' : 'bg-slate-700';
-  const headerBg = variant === 'admin' ? 'bg-slate-900' : 'bg-slate-800';
+  const cardBg = variant === 'admin' ? 'bg-white' : 'bg-white';
+  const headerBg = variant === 'admin' ? 'bg-gray-50' : 'bg-gray-50';
 
   return (
-    <Card className={`${cardBg} border-slate-600 text-white w-80`}>
+    <Card className={`${cardBg} border-gray-200 text-gray-900 w-80 shadow-sm`}>
       <CardHeader className={`${headerBg} rounded-t-lg`}>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-medium text-white">{title}</CardTitle>
-          <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+          <CardTitle className="text-lg font-medium text-gray-900">{title}</CardTitle>
+          <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
             <MoreHorizontal size={16} />
           </Button>
         </div>
@@ -29,7 +29,7 @@ const FeatureCard = ({ title, features, onAddCard, variant = 'passenger' }: Feat
         {features.map((feature, index) => (
           <div
             key={index}
-            className="bg-slate-600 rounded-lg p-3 text-sm text-slate-200 hover:bg-slate-500 transition-colors cursor-pointer"
+            className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer border border-gray-200"
           >
             {feature}
           </div>
@@ -37,7 +37,7 @@ const FeatureCard = ({ title, features, onAddCard, variant = 'passenger' }: Feat
         <Button
           onClick={onAddCard}
           variant="ghost"
-          className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-600 mt-4"
+          className="w-full justify-start text-gray-600 hover:text-gray-800 hover:bg-gray-100 mt-4"
         >
           <Plus size={16} className="mr-2" />
           Add a card

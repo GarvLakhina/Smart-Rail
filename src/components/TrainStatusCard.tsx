@@ -74,7 +74,7 @@ const TrainStatusCard = ({
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-lg flex items-center gap-1">
-              {trainNumber} <span className="text-sm text-muted-foreground mx-1">|</span> {trainName}
+              {trainNumber} <span className="text-sm text-gray-500 mx-1">|</span> {trainName}
             </CardTitle>
             <CardDescription className="flex items-center gap-2 mt-1">
               <MapPin size={14} />
@@ -89,18 +89,18 @@ const TrainStatusCard = ({
         <div className="flex justify-between mb-2">
           <div className="text-sm">
             <div className="font-medium">{departureTime}</div>
-            <div className="text-muted-foreground">{origin}</div>
+            <div className="text-gray-500">{origin}</div>
           </div>
           <div className="text-sm text-right">
             <div className="font-medium">{arrivalTime}</div>
-            <div className="text-muted-foreground">{destination}</div>
+            <div className="text-gray-500">{destination}</div>
           </div>
         </div>
         
         <Progress value={progress} className="h-1.5" />
         
         {nextStation && (
-          <div className="flex items-center mt-3 text-xs text-muted-foreground">
+          <div className="flex items-center mt-3 text-xs text-gray-500">
             <Clock size={12} className="mr-1" />
             <span>Next station: {nextStation}</span>
           </div>
@@ -109,13 +109,13 @@ const TrainStatusCard = ({
       
       <CardFooter className="pt-2 flex items-center justify-between text-xs">
         {platform && (
-          <div className="bg-rail-light text-rail-primary px-2 py-1 rounded-md font-medium">
+          <div className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md font-medium border border-blue-200">
             Platform {platform}
           </div>
         )}
         
         {status === "delayed" && (
-          <div className="flex items-center text-amber-500">
+          <div className="flex items-center text-amber-600">
             <AlertTriangle size={12} className="mr-1" />
             <span>Expected delay: {delay} minutes</span>
           </div>

@@ -16,17 +16,19 @@ const Layout = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-gray-100">
       <Navbar toggleSidebar={toggleSidebar} />
       <div className="flex flex-1">
         <Sidebar isOpen={sidebarOpen} />
-        <main className="flex-1 p-4 md:p-6 transition-all duration-300">
+        <main className="flex-1 transition-all duration-300">
           {user && (
-            <div className="container mx-auto px-4 py-2">
+            <div className="container mx-auto px-4 py-3">
               <AnnouncementBanner />
             </div>
           )}
-          <Outlet />
+          <div className="container mx-auto px-4 py-8 lg:px-6">
+            <Outlet />
+          </div>
         </main>
       </div>
       <Footer />
