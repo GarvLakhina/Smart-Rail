@@ -44,14 +44,15 @@ const PaymentPage = ({ selectedTrain, bookingDetails, selectedSeats, onBack, onP
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [ticketData, setTicketData] = useState<any>(null);
-  const [priority, setPriority] = useState(false);
-  const [priorityType, setPriorityType] = useState("");
+  const [priority, setPriority] = useState(bookingDetails.priorityTicket);
+  const [priorityType, setPriorityType] = useState(bookingDetails.priorityTicket ? "Student" : "");
   const [priorityDoc, setPriorityDoc] = useState<File | null>(null);
   const [docUploaded, setDocUploaded] = useState(false);
 
   const totalFare = selectedTrain.price * parseInt(bookingDetails.passengers);
+  const prioritySurcharge = bookingDetails.priorityTicket ? totalFare * 0.2 : 0;
   const serviceFee = 2.99;
-  const totalAmount = totalFare + serviceFee;
+  const totalAmount = totalFare + prioritySurcharge + serviceFee;
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -106,12 +107,6 @@ const PaymentPage = ({ selectedTrain, bookingDetails, selectedSeats, onBack, onP
       status: "Confirmed",
       coach: "C1",
     };
-
-    try {
-      await ticketsApi.add(newTicketData);
-    } catch (e) {
-      console.warn("Saving ticket failed, but proceeding to confirmation.", e);
-    }
 
     setTicketData(newTicketData);
     setPaymentSuccess(true);
@@ -169,6 +164,12 @@ const PaymentPage = ({ selectedTrain, bookingDetails, selectedSeats, onBack, onP
               <span>Tickets ({bookingDetails.passengers}x)</span>
               <span>₹{totalFare.toFixed(2)}</span>
             </div>
+            {bookingDetails.priorityTicket && (
+              <div className="flex justify-between">
+                <span>Priority Surcharge (20%)</span>
+                <span>₹{prioritySurcharge.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span>Service Fee</span>
               <span>₹{serviceFee.toFixed(2)}</span>
@@ -176,7 +177,7 @@ const PaymentPage = ({ selectedTrain, bookingDetails, selectedSeats, onBack, onP
             <Separator />
             <div className="flex justify-between font-semibold text-lg">
               <span>Total Amount</span>
-              <span>₹{(totalFare + serviceFee).toFixed(2)}</span>
+              <span>₹{(totalAmount).toFixed(2)}</span>
             </div>
           </div>
           {/* Priority Option */}

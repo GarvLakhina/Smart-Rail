@@ -116,25 +116,20 @@ const generateLiveStatus = (now: Date = new Date()): TrainStatusItem[] => {
       // Before first departure
       status = 'Boarding'
       const timeUntilDeparture = departureTime - currentTime
-      if (timeUntilDeparture < 0 && timeUntilDeparture > -600000) {
-        // just missed slot -> slight delay window
-        delay = 10
-        status = 'Delayed'
-      }
+      // No randomness; treat pre-departure as Boarding
       nextStation = getStationName(trainSchedules[1].station_id)
     } else if (currentLegIndex < trainSchedules.length - 1) {
       const nextStop = trainSchedules[currentLegIndex + 1]
       nextStation = getStationName(nextStop.station_id)
-      // Derive status consistently: small random chance of Cancelled, otherwise On Time with possible delay
-      const r = Math.random()
-      if (r < 0.03) {
-        status = 'Cancelled'
-        nextStation = 'N/A'
-      } else if (r < 0.18) {
+      // Deterministic: mark Delayed only if current time has passed expected arrival at nextStop
+      const nextArrStr = nextStop.arrival || nextStop.departure || '00:00'
+      const nextArr = new Date(now.toDateString() + ' ' + nextArrStr).getTime()
+      if (currentTime > nextArr) {
         status = 'Delayed'
-        delay = 5 + Math.floor(Math.random() * 25)
+        delay = Math.floor((currentTime - nextArr) / 60000)
       } else {
         status = 'On Time'
+        delay = 0
       }
       currentDeparture = trainSchedules[currentLegIndex].departure
     } else {
@@ -210,7 +205,7 @@ export const useTrainStatus = (): UseTrainStatusReturn => {
   }, [])
 
   useEffect(() => {
-    // Recalculate live status on an interval to simulate live updates with accelerated time
+    // Recalculate live status deterministically on an interval with accelerated clock
     setLoading(true)
     setTrains(generateLiveStatus(getSimBaseNow()))
     setLoading(false)
@@ -218,20 +213,7 @@ export const useTrainStatus = (): UseTrainStatusReturn => {
       offsetMinRef.current += 1 // advance simulated clock by 1 minute per tick
       const shiftedNow = new Date(getSimBaseNow().getTime() + offsetMinRef.current * 60_000)
       const fresh = generateLiveStatus(shiftedNow)
-      const jittered: TrainStatusItem[] = fresh.map((t): TrainStatusItem => {
-        const r = Math.random()
-        let status: TrainStatusItem['status'] = t.status
-        let delay = t.delay
-        if (t.status === 'Delayed') {
-          const delta = Math.floor(Math.random() * 3) - 1 // -1..+1
-          delay = Math.max(0, t.delay + delta)
-        } else if (t.status === 'On Time' && r < 0.08) {
-          status = 'Delayed'
-          delay = 5
-        }
-        return { ...t, status, delay }
-      })
-      setTrains(jittered)
+      setTrains(fresh)
     }, 60000) // refresh every 1 minute
     return () => clearInterval(interval)
   }, [])

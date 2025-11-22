@@ -46,11 +46,17 @@ function writeLS(tickets: PriorityTicketRecord[]) {
 
 export const priorityTicketsApi = {
   async uploadDocument(file: File): Promise<{ fileUrl: string; fileName: string }> {
-    // For frontend-only, we can't persist files without a backend or storage bucket.
-    // Use a local object URL as a temporary reference.
+    // Persist as data URL so it survives sessions and can be opened by admins
+    const toDataURL = (f: File) => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(f);
+    });
+    const dataUrl = await toDataURL(file);
     return {
-      fileUrl: URL.createObjectURL(file),
-      fileName: file.name
+      fileUrl: dataUrl,
+      fileName: file.name,
     };
   },
 
@@ -124,6 +130,33 @@ export const priorityTicketsApi = {
       const updated = current.map(ticket => 
         ticket.id === id 
           ? { ...ticket, status, adminNotes, updated_at: new Date().toISOString() }
+          : ticket
+      );
+      writeLS(updated);
+    }
+  },
+  
+  async updateDocument(id: string, fileUrl: string, fileName: string) {
+    try {
+      if (!id) throw new Error('Missing ticket id');
+      const ref = doc(db, 'priority_tickets', id);
+      await updateDoc(ref, {
+        documentUrl: fileUrl,
+        documentName: fileName,
+        updated_at: serverTimestamp(),
+      });
+      const current = readLS();
+      const updated = current.map(ticket => 
+        ticket.id === id 
+          ? { ...ticket, documentUrl: fileUrl, documentName: fileName, updated_at: new Date().toISOString() }
+          : ticket
+      );
+      writeLS(updated);
+    } catch (error) {
+      const current = readLS();
+      const updated = current.map(ticket => 
+        ticket.id === id 
+          ? { ...ticket, documentUrl: fileUrl, documentName: fileName, updated_at: new Date().toISOString() }
           : ticket
       );
       writeLS(updated);

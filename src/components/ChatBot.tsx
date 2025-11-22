@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MessageCircle, Send, Mic, MicOff, User, Bot, MapPin, Star, Clock, ExternalLink, Heart, Share2, Filter, Phone, Navigation, RefreshCw, Info } from "lucide-react";
 import { stations, Station, TouristSpot, Hotel } from "@/lib/stationData";
 import { TouristSpotService, HotelService } from "@/lib/apiService";
+const CHATBOT_API = import.meta.env.VITE_CHATBOT_API_URL as string | undefined;
 
 interface Message {
   id: string;
@@ -136,6 +137,38 @@ const [trainStatusPNR, setTrainStatusPNR] = useState<string>("");
       }
       return true;
     });
+  };
+
+  // Lightweight intent helpers for local fallback in 'query' mode
+  const findStationFromText = (text: string): Station | undefined => {
+    const lower = text.toLowerCase();
+    // common aliases map
+    const aliases: Record<string, string> = {
+      bangalore: 'SBC', bengaluru: 'SBC', bengalore: 'SBC',
+      delhi: 'NDLS', newdelhi: 'NDLS',
+      mumbai: 'BCT', bombay: 'BCT',
+      chennai: 'MAS', madras: 'MAS',
+      hyderabad: 'KCG', secunderabad: 'SC',
+      kolkata: 'KOAA', howrah: 'HWH',
+      patna: 'PNBE', ahmedabad: 'ADI', jaipur: 'JP', lucknow: 'LKO'
+    };
+    for (const key of Object.keys(aliases)) {
+      if (lower.replace(/\s+/g,'').includes(key)) {
+        const code = aliases[key];
+        const stByAlias = stations.find(s => s.id.toUpperCase() === code);
+        if (stByAlias) return stByAlias;
+      }
+    }
+    const byCode = stations.find(s => lower.includes(s.id.toLowerCase()));
+    if (byCode) return byCode;
+    return stations.find(s => lower.includes(s.name.toLowerCase().split(' ')[0]));
+  };
+
+  const inferCategory = (text: string): 'hotels' | 'attractions' | undefined => {
+    const lower = text.toLowerCase();
+    if (lower.includes('hotel') || lower.includes('stay') || lower.includes('room')) return 'hotels';
+    if (lower.includes('place') || lower.includes('visit') || lower.includes('attraction') || lower.includes('site') || lower.includes('tourist')) return 'attractions';
+    return undefined;
   };
 
   const getSmartSuggestions = () => {
@@ -308,17 +341,70 @@ const [trainStatusPNR, setTrainStatusPNR] = useState<string>("");
         return;
       case 'query':
       default:
+        // Fallback-first approach: try to satisfy common intents locally
+        {
+          const st = findStationFromText(userMessage.text);
+          const cat = inferCategory(userMessage.text);
+          if (st && cat) {
+            setIsTyping(true);
+            setDiscover(prev => ({ ...prev, selectedStation: st, selectedCategory: cat }));
+            const run = async () => {
+              try {
+                if (cat === 'hotels') {
+                  const hotels = await HotelService.getNearbyHotels(st.lat, st.lon);
+                  setDiscover(prev => ({
+                    ...prev,
+                    results: {
+                      hotels,
+                      attractions: prev.results?.attractions ?? []
+                    }
+                  }));
+                  setMessages(prev => [...prev, { id: (Date.now()+2).toString(), text: `Found ${hotels.length} hotels near ${st.name}.`, isBot: true, timestamp: new Date() }]);
+                } else {
+                  const attractions = await TouristSpotService.getNearbyAttractions(st.lat, st.lon);
+                  setDiscover(prev => ({
+                    ...prev,
+                    results: {
+                      hotels: prev.results?.hotels ?? [],
+                      attractions
+                    }
+                  }));
+                  setMessages(prev => [...prev, { id: (Date.now()+2).toString(), text: `Found ${attractions.length} attractions near ${st.name}.`, isBot: true, timestamp: new Date() }]);
+                }
+                setFlow('show_results');
+              } finally {
+                setIsTyping(false);
+              }
+            };
+            run();
+            return;
+          }
+        }
+        // Otherwise, try backend; if it fails, provide canned guidance
+        if (!CHATBOT_API) {
+          // No backend configured; answer locally
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 2).toString(),
+            text: generateBotResponse(userMessage.text),
+            isBot: true,
+            timestamp: new Date()
+          }]);
+          return;
+        }
         setIsTyping(true);
-        fetch('/api/chatbot/query', {
+        fetch(`${CHATBOT_API}/query`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: userMessage.text })
         })
-          .then(res => res.json())
+          .then(async res => {
+            if (!res.ok) throw new Error(String(res.status));
+            return res.json();
+          })
           .then(data => {
             setMessages(prev => [...prev, {
               id: (Date.now() + 2).toString(),
-              text: data.answer || 'Sorry, I could not answer that.',
+              text: data.answer || generateBotResponse(userMessage.text),
               isBot: true,
               timestamp: new Date()
             }]);
@@ -327,7 +413,7 @@ const [trainStatusPNR, setTrainStatusPNR] = useState<string>("");
           .catch(() => {
             setMessages(prev => [...prev, {
               id: (Date.now() + 2).toString(),
-              text: 'Could not reach chatbot service.',
+              text: generateBotResponse(userMessage.text),
               isBot: true,
               timestamp: new Date()
             }]);
@@ -995,7 +1081,7 @@ const [trainStatusPNR, setTrainStatusPNR] = useState<string>("");
                 placeholder="Type your message or use voice..."
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                 className="flex-1"
               />
               <Button 

@@ -1,117 +1,81 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, MapPin, Train, Clock, Shield, CheckCircle, Zap } from "lucide-react";
+import { MapPin, Train, Clock, Zap, AlertTriangle } from "lucide-react";
+import { useTrainStatus } from "@/hooks/useTrainStatus";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import schedules from "../../simulation/schedules_100.json";
 
 const CollisionDetection = () => {
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
+  const { trains } = useTrainStatus();
 
-  // Mock data - in real app, this would come from train tracking systems
-  const routes = [
-    {
-      id: "route_1",
-      name: "Central-North Line",
-      trains: [
-        {
-          id: "EXP101",
-          name: "Ocean Express", 
-          position: 45.2,
-          speed: 85,
-          direction: "north",
-          nextStation: "Junction Point",
-          eta: "14:25"
-        },
-        {
-          id: "REG205",
-          name: "Valley Commuter",
-          position: 52.8,
-          speed: 92,
-          direction: "south", 
-          nextStation: "Central Hub",
-          eta: "14:18"
-        }
-      ],
-      riskLevel: "high",
-      warningZone: { start: 48, end: 55 },
-      lastUpdate: "2 seconds ago"
-    },
-    {
-      id: "route_2", 
-      name: "East-West Corridor",
-      trains: [
-        {
-          id: "SPD330",
-          name: "Capital Bullet",
-          position: 23.5,
-          speed: 110,
-          direction: "east",
-          nextStation: "Metro East",
-          eta: "14:30"
-        },
-        {
-          id: "LOC445", 
-          name: "Suburban Local",
-          position: 78.2,
-          speed: 65,
-          direction: "west",
-          nextStation: "Business District",
-          eta: "14:35"
-        }
-      ],
-      riskLevel: "low",
-      warningZone: null,
-      lastUpdate: "1 second ago"
-    },
-    {
-      id: "route_3",
-      name: "Metro Circle Line", 
-      trains: [
-        {
-          id: "CIR112",
-          name: "Circle Express",
-          position: 15.8,
-          speed: 75,
-          direction: "clockwise",
-          nextStation: "North Plaza",
-          eta: "14:22"
-        }
-      ],
-      riskLevel: "safe",
-      warningZone: null,
-      lastUpdate: "3 seconds ago"
+  const groups = useMemo(() => {
+    const byStation = new Map<string, any[]>();
+    (trains || []).forEach((t: any) => {
+      const key = t.nextStation || "En Route";
+      const arr = byStation.get(key) || [];
+      arr.push(t);
+      byStation.set(key, arr);
+    });
+    const list = Array.from(byStation.entries()).map(([station, arr], idx) => {
+      const riskLevel = arr.length >= 3 ? "high" : arr.length === 2 ? "low" : "safe";
+      return {
+        id: String(idx + 1),
+        name: station,
+        trains: arr.map((t: any) => ({
+          id: String(t.id),
+          name: String(t.name || "Unknown"),
+          nextStation: station,
+          eta: t.arrival || t.departure || "--:--",
+        })),
+        riskLevel,
+        lastUpdate: "just now",
+      };
+    });
+    return list;
+  }, [trains]);
+
+  // Risk badges removed per request
+
+  const totalTrains = (trains || []).length;
+  const activeStations = new Set((trains || []).map((t: any) => t.nextStation).filter(Boolean)).size;
+  const onTimePct = (() => {
+    const list = trains || [];
+    if (!list.length) return 0;
+    const ontime = list.filter((t: any) => String(t.status).toLowerCase().includes("on time")).length;
+    return Math.round((ontime / list.length) * 1000) / 10;
+  })();
+  const averageSpeed = (() => {
+    try {
+      const byTrain: Record<string, any[]> = {};
+      (schedules as any[]).forEach((s) => {
+        (byTrain[s.train_no] ||= []).push(s);
+      });
+      const speeds: number[] = [];
+      (trains || []).forEach((t: any) => {
+        const arr = byTrain[String(t.id)] || [];
+        if (arr.length < 2) return;
+        arr.sort((a,b) => (a.day_offset - b.day_offset) || (a.seq - b.seq));
+        const first = arr[0];
+        const last = arr[arr.length - 1];
+        const km = Math.max(0, (last.cum_distance_km || 0) - (first.cum_distance_km || 0));
+        const dep = (first.departure || first.arrival || "00:00").split(":");
+        const arrv = (last.arrival || last.departure || "00:00").split(":");
+        const depMin = (first.day_offset || 0) * 1440 + (+dep[0]||0)*60 + (+dep[1]||0);
+        const arrMin = (last.day_offset || 0) * 1440 + (+arrv[0]||0)*60 + (+arrv[1]||0);
+        const hours = Math.max(0.1, (arrMin - depMin) / 60);
+        speeds.push(km / hours);
+      });
+      if (!speeds.length) return 0;
+      return Math.round(speeds.reduce((a,b)=>a+b,0) / speeds.length);
+    } catch {
+      return 0;
     }
-  ];
-
-  const getRiskColor = (level: string) => {
-    switch (level) {
-      case "high": return "text-red-600 bg-red-100 border-red-300";
-      case "medium": return "text-yellow-600 bg-yellow-100 border-yellow-300";
-      case "low": return "text-blue-600 bg-blue-100 border-blue-300";
-      default: return "text-green-600 bg-green-100 border-green-300";
-    }
-  };
-
-  const getRiskIcon = (level: string) => {
-    switch (level) {
-      case "high": return <AlertTriangle className="h-4 w-4" />;
-      case "medium": return <Zap className="h-4 w-4" />;
-      case "low": return <Shield className="h-4 w-4" />;
-      default: return <CheckCircle className="h-4 w-4" />;
-    }
-  };
-
-  // Calculate statistics
-  const totalTrains = routes.reduce((sum, route) => sum + route.trains.length, 0);
-  const activeStations = new Set(
-    routes.flatMap(route => route.trains.map(train => train.nextStation))
-  ).size;
-  const averageSpeed = Math.round(
-    routes.flatMap(route => route.trains).reduce((sum, train) => sum + train.speed, 0) / 
-    routes.flatMap(route => route.trains).length
-  );
-  const highRiskRoutes = routes.filter(route => route.riskLevel === 'high').length;
+  })();
+  const highRiskRoutes = groups.filter(g => g.riskLevel === 'high').length;
 
   return (
     <div className="container mx-auto p-6">
@@ -169,7 +133,7 @@ const CollisionDetection = () => {
 
       {/* Routes List */}
       <div className="space-y-4">
-        {routes.map((route) => (
+        {groups.map((route) => (
           <Card key={route.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
               <div className="flex justify-between items-start">
@@ -180,10 +144,7 @@ const CollisionDetection = () => {
                     Last updated {route.lastUpdate}
                   </CardDescription>
                 </div>
-                <Badge className={getRiskColor(route.riskLevel)}>
-                  {getRiskIcon(route.riskLevel)}
-                  <span className="ml-1 capitalize">{route.riskLevel} risk</span>
-                </Badge>
+                {/* risk badge removed */}
               </div>
             </CardHeader>
             <CardContent>
@@ -237,7 +198,7 @@ const CollisionDetection = () => {
                 <span className="text-sm text-green-700">On-Time %</span>
                 <Clock className="h-4 w-4 text-green-600" />
               </div>
-              <div className="mt-2 text-2xl font-semibold text-green-900">98.2%</div>
+              <div className="mt-2 text-2xl font-semibold text-green-900">{onTimePct}%</div>
             </div>
 
             <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">

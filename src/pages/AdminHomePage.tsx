@@ -94,7 +94,7 @@ const AdminHomePage = () => {
               <div className="bg-gray-100 rounded-lg h-80 relative overflow-hidden cursor-pointer">
                 {/* Click Overlay Anchor to open simulation in new tab */}
                 <a
-                  href="https://trackwisesimulation.vercel.app/"
+                  href="https://trackwisesimulation-tau.vercel.app/"
                   target="_blank"
                   rel="noopener noreferrer"
                   onClickCapture={(e) => { e.stopPropagation(); }}

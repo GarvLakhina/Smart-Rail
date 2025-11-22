@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,18 +11,18 @@ import {
   Shield, 
   Zap, 
   QrCode, 
-  MessageCircle,
   MapPin,
   Star,
   CreditCard,
   Clock,
   AlertTriangle,
-  Activity,
   LogIn,
   ArrowRight,
   Sparkles
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 const WelcomePage = () => {
   const [email, setEmail] = useState("");
@@ -33,17 +32,20 @@ const WelcomePage = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
       await signIn(email, password);
-      
-      // Route based on email
-      if (email === "wizking864@gmail.com") {
-        navigate("/admin");
-      } else {
-        navigate("/passenger");
+      // Decide route by role stored in Firestore
+      const uid = (await import("firebase/auth")).getAuth().currentUser?.uid;
+      if (uid) {
+        const adminSnap = await getDoc(doc(db, "admins", uid));
+        if (adminSnap.exists()) {
+          navigate("/admin");
+          return;
+        }
       }
+      navigate("/passenger");
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("Login error:", error);
     }
   };
@@ -56,14 +58,12 @@ const WelcomePage = () => {
   const quickLoginDemoAdmin = async () => {
     setEmail("wizking864@gmail.com");
     setPassword("Wizking@123");
-    // allow state to update before sign-in
     setTimeout(async () => {
       try {
         await signIn("wizking864@gmail.com", "Wizking@123");
         navigate("/admin");
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error(err);
+      } catch {
+        // ignore
       }
     }, 0);
   };
