@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +78,20 @@ const CollisionDetectionMap = () => {
   };
 
   const handleMapClick = () => {
-    window.location.href = "https://trackwisesimulation.vercel.app/";
+    const simulationUrl = "https://trackwisesimulation.vercel.app/";
+    fetch(simulationUrl, { method: "HEAD" })
+      .then((response) => {
+        if (response.ok) {
+          window.location.href = simulationUrl;
+        } else {
+          console.error("Simulation URL not found (404).");
+          alert("The simulation page is currently unavailable. Please try again later.");
+        }
+      })
+      .catch((error) => {
+        console.error("Error accessing simulation URL:", error);
+        alert("Unable to access the simulation page. Please check your internet connection.");
+      });
   };
 
   return (
@@ -105,12 +117,13 @@ const CollisionDetectionMap = () => {
           <div className="relative bg-gray-100 rounded-lg h-96 overflow-hidden">
             {/* Click Overlay Anchor */}
             <a
-              href="https://trackwisesimulation.vercel.app/"
+              href="https://collisiondetectionsimulation.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
-              onMouseDown={(e) => { e.stopPropagation(); }}
-              onClickCapture={(e) => { e.stopPropagation(); }}
-              onClick={(e) => { e.stopPropagation(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                handleMapClick();
+              }}
               className="absolute inset-0 z-[9999] block cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
               aria-label="Open TrackWise Simulation"
               title="Open TrackWise Simulation"
