@@ -59,6 +59,7 @@ import DatabaseManagement from "./pages/DatabaseManagement";
 import SystemSettings from "./pages/SystemSettings";
 import UserProfile from "./pages/UserProfile";
 import TicketsPage from "./pages/TicketsPage";
+import FoodOrdering from "./pages/FoodOrdering";
 
 const queryClient = new QueryClient();
 
@@ -296,6 +297,14 @@ const App = () => (
                   />
                   <Route path="help" element={<HelpCenter />} />
                   <Route path="ticket/:pnr" element={<TicketDetailsPage />} />
+                  <Route
+                    path="food-ordering"
+                    element={
+                      <ProtectedRoute>
+                        <FoodOrdering />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route
                     path="tickets"
                     element={

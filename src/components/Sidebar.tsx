@@ -35,7 +35,8 @@ import {
   Filter,
   Download,
   Upload,
-  MapPin
+  MapPin,
+  Utensils
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -90,6 +91,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                 <SidebarLink to="/stations" icon={MapPin} label="Stations" isOpen={isOpen} />
                 <SidebarLink to="/trip-planner" icon={Route} label="Trip Planner" isOpen={isOpen} />
                 <SidebarLink to="/book-ticket" icon={Ticket} label="Book Ticket" isOpen={isOpen} />
+                <SidebarLink to="/food-ordering" icon={Utensils} label="Food Ordering" isOpen={isOpen} />
                 <SidebarLink to="/help" icon={HelpCircle} label="Help" isOpen={isOpen} />
               </>
             )}
